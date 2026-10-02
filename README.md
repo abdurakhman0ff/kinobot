@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🎬 KinoBot
 
 Kod orqali kino yuboradigan Telegram bot. Unda majburiy obuna, pullik kontent (Telegram Stars), admin panel va reklama yuborish bor.
@@ -61,3 +62,6 @@ pip install -r requirements.txt
 cp .env.example .env   # qiymatlarni to'ldiring
 python main.py
 ```
+=======
+# kinobot
+>>>>>>> 9a42091912ce01307e7b65ed0e216628a997c988
