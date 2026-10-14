@@ -76,8 +76,10 @@ async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db
         await edit_kb(callback.message, await restore_kb(bot, uid, movie, data.k, data.e))
 
     elif data.a == "se":
-        # Eski qism xabarini xavfsiz o'chirish uchun faqat joriy xabar ID sini uzatamiz
-        old_msg_id = callback.message.message_id if callback.message else None
+        # 💡 Faqat video xabarlardagi "Keyingi/Oldingi qism" tugmalari bosilganda oldingi videoni o'chiramiz.
+        # Fasllar menyusidan qism tanlanganda esa menyu o'chib ketmaydi.
+        is_video_msg = bool(callback.message and (callback.message.video or callback.message.document))
+        old_msg_id = callback.message.message_id if is_video_msg else None
         await delivery.open_episode(bot, db_user, uid, data.v, old_message_id=old_msg_id)
 
     elif data.a == "ss":
