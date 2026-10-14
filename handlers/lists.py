@@ -55,6 +55,9 @@ async def catalog_view(kind: str, page: int) -> tuple[str, InlineKeyboardMarkup]
 
 @router.callback_query(Nav.filter(F.to.in_({"top", "new", "films", "series"})))
 async def nav_lists(callback: CallbackQuery, callback_data: Nav, bot: Bot) -> None:
+    # ⚡ Darhol javob berish (tugma qotib qolmasligi uchun)
+    await answer(callback)
+    
     if callback_data.to == "top":
         text, kb = await top_view("a", 0)
     elif callback_data.to == "new":
@@ -62,21 +65,23 @@ async def nav_lists(callback: CallbackQuery, callback_data: Nav, bot: Bot) -> No
     else:
         text, kb = await catalog_view(callback_data.to, 0)
     await render(bot, callback.from_user.id, callback.message, text, kb)
-    await answer(callback)
 
 
 @router.callback_query(Pg.filter(F.k.in_({"top", "films", "series"})))
 async def page_lists(callback: CallbackQuery, callback_data: Pg, bot: Bot) -> None:
+    # ⚡ Darhol javob berish
+    await answer(callback)
+    
     if callback_data.k == "top":
         text, kb = await top_view(callback_data.x, callback_data.p)
     else:
         text, kb = await catalog_view(callback_data.k, callback_data.p)
     await render(bot, callback.from_user.id, callback.message, text, kb)
-    await answer(callback)
 
 
 @router.callback_query(Nav.filter(F.to == "random"))
 async def nav_random(callback: CallbackQuery, bot: Bot, db_user: Row) -> None:
+    # ⚡ Darhol javob berish
     await answer(callback)
     await delivery.show_random(bot, db_user, callback.from_user.id, callback.message)
 
