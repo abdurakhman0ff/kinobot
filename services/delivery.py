@@ -238,11 +238,28 @@ async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None 
         else:
             caption, kb, src = card_caption(movie), await film_kb(bot, user["id"], movie), movie
 
-        # 🗑 Agar oldingi xabar ID si kelgan bo'lsa, yangi video yuborishdan oldin uni o'chiramiz
+        # 🗑 Agar video xabari ID si bo'lsa (va menyu xabari bo'lmasa), yangisini yuborishdan oldin o'chiramiz
         if old_message_id:
             try:
                 await bot.delete_message(chat_id, old_message_id)
             except Exception:
                 pass
 
-        # 🔒 HAMMA filmlar va seriallar uchun protect=True
+        # 🔒 HAMMA filmlar va seriallar uchun protect=True qilindi
+        if not await send_video(bot, chat_id, src, caption, kb, protect=True):
+            await bot.send_message(chat_id, t.VIDEO_UNAVAILABLE)
+            where = t.ADMIN_EP_SUFFIX.format(season=ep["season"], number=ep["number"]) if ep else ""
+            await notify.owner(
+                bot,
+                t.ADMIN_VIDEO_MISSING.format(code=movie["code"], title=esc(movie["title"]), where=where),
+                key=f"missing:{movie['id']}:{ep['id'] if ep else 0}",
+                every=600,
+            )
+            return False
+
+        await movies.record_view(user["id"], movie["id"], ep["id"] if ep else None)
+        if ep:
+            await movies.set_progress(user["id"], movie["id"], ep["season"], ep["number"])
+        if not privileged:
+            await limits.consume(user["id"], kind, item_key)
+    return True
