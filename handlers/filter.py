@@ -87,13 +87,16 @@ async def results_view(f: Flt, page: int) -> tuple[str, InlineKeyboardMarkup]:
 
 @router.callback_query(Nav.filter(F.to == "filter"))
 async def nav_filter(callback: CallbackQuery, bot: Bot) -> None:
+    # ⚡ DARHOL JAVOB BERISH
+    await answer(callback)
     text, markup = await main_view(Flt(a="show"))
     await render(bot, callback.from_user.id, callback.message, text, markup)
-    await answer(callback)
 
 
 @router.callback_query(Flt.filter())
 async def filter_action(callback: CallbackQuery, callback_data: Flt, bot: Bot) -> None:
+    # ⚡ DARHOL JAVOB BERISH
+    await answer(callback)
     f = callback_data
     if f.a in ("t", "l", "y"):
         text, markup = await options_view(f)
@@ -110,11 +113,11 @@ async def filter_action(callback: CallbackQuery, callback_data: Flt, bot: Bot) -
             f = Flt(a="show")
         text, markup = await main_view(f)
     await render(bot, callback.from_user.id, callback.message, text, markup)
-    await answer(callback)
 
 
 @router.callback_query(Pg.filter(F.k == "flt"))
 async def filter_page(callback: CallbackQuery, callback_data: Pg, bot: Bot) -> None:
+    # ⚡ DARHOL JAVOB BERISH
+    await answer(callback)
     text, markup = await results_view(_decode(callback_data.x), callback_data.p)
     await render(bot, callback.from_user.id, callback.message, text, markup)
-    await answer(callback)
