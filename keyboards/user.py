@@ -206,9 +206,10 @@ def watch_url_kb(bot_username: str, code: int, text: str = t.BTN_WATCH) -> Inlin
 
 def tariffs_kb(tariffs: Sequence[dict[str, Any]]) -> InlineKeyboardMarkup:
     rows = [[btn(t.TARIFF_BTN.format(days=x["days"], price=som(x["price_uzs"])), Vip(a="t", t=x["id"]))]
-            for x in tariffs]
-    rows.append(nav_row())
-    return kb(rows)
+            for x in tariffs]def renew_kb() -> InlineKeyboardMarkup:
+    return kb([[btn(t.BTN_RENEW, Nav(to="vip"))]])
+
+
 
 
 def pay_methods_kb(tariff: dict[str, Any], click_enabled: bool) -> InlineKeyboardMarkup:
@@ -216,10 +217,16 @@ def pay_methods_kb(tariff: dict[str, Any], click_enabled: bool) -> InlineKeyboar
     if tariff.get("price_stars"):
         rows.append([btn(t.BTN_PAY_STARS.format(stars=tariff["price_stars"]), Vip(a="stars", t=tariff["id"]))])
     if click_enabled and tariff.get("price_uzs"):
-        rows.append([btn(t.BTN_PAY_CLICK.format(price=som(tariff["price_uzs"])), Vip(a="click", t=tariff["id"]))])
+        # Click so'zi o'rniga aniqroq qilib "Karta orqali" deb yozamiz
+        rows.append([btn(f"💳 Karta orqali — {som(tariff['price_uzs'])}", Vip(a="click", t=tariff["id"]))])
     rows.append(nav_row(Nav(to="vip")))
     return kb(rows)
 
-
 def renew_kb() -> InlineKeyboardMarkup:
     return kb([[btn(t.BTN_RENEW, Nav(to="vip"))]])
+
+def cancel_payment_kb() -> InlineKeyboardMarkup:
+    """Rekvizitlar chiqqandagi bekor qilish tugmasi."""
+    return kb([
+        [btn("❌ Bekor qilish", Nav(to="vip"))]
+    ])
