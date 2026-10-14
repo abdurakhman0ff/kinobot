@@ -206,7 +206,12 @@ def watch_url_kb(bot_username: str, code: int, text: str = t.BTN_WATCH) -> Inlin
 
 def tariffs_kb(tariffs: Sequence[dict[str, Any]]) -> InlineKeyboardMarkup:
     rows = [[btn(t.TARIFF_BTN.format(days=x["days"], price=som(x["price_uzs"])), Vip(a="t", t=x["id"]))]
-            for x in tariffs]def renew_kb() -> InlineKeyboardMarkup:
+            for x in tariffs]
+    rows.append(nav_row())
+    return kb(rows)
+
+
+def renew_kb() -> InlineKeyboardMarkup:
     return kb([[btn(t.BTN_RENEW, Nav(to="vip"))]])
 
 
