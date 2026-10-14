@@ -107,17 +107,25 @@ async def send_manual_card_info(callback: CallbackQuery, callback_data: Vip, sta
         await answer(callback, t.TARIFF_GONE, alert=True)
         return
         
-    # ManualPaymentState import qilmasdan ham payments.py fayliga uzatish uchun state o'rnatamiz
     from handlers.payments import ManualPaymentState
+    from keyboards.user import cancel_payment_kb  # Tugmani import qilamiz
     
     await state.update_data(tariff_id=tariff["id"])
     await state.set_state(ManualPaymentState.waiting_for_receipt)
     
+    # HTML teglari bilan toza matn (** o'rniga <b> va <i> ishlatamiz)
+    text = (
+        "💳 <b>Karta orqali to'lov rekvizitlari:</b>\n\n"
+        f"📌 <b>Tarif:</b> {tariff['days']} kunlik VIP obuna\n"
+        f"💰 <b>Summa:</b> {som(tariff['price_uzs'])}\n\n"
+        "💳 <b>Karta raqam:</b> <code>9860350140057646</code>\n"
+        "👤 <b>Karta egasi:</b> A. K\n\n"
+        "📥 <i>To'lovni amalga oshirgach, chek (skrinshot) rasmini shu chatga yuboring.</i>"
+    )
+    
+    # parse_mode="HTML" va bekor qilish tugmasi qo'shilgan holatda yuborish
     await callback.message.answer(
-        f"💳 **Karta orqali to'lov rekvizitlari:**\n\n"
-        f"📌 **Tarif:** {tariff['days']} kunlik VIP obuna\n"
-        f"💰 **Summa:** {som(tariff['price_uzs'])}\n\n"
-        f"💳 **Karta raqam:** `9860350140057646`\n"
-        f"👤 **Karta egasi:** A. K\n\n"
-        f"To'lovni amalga oshirgach, iltimos, **chek (skrinshot) rasmini** shu chatga yuboring."
+        text=text,
+        parse_mode="HTML",
+        reply_markup=cancel_payment_kb()
     )
