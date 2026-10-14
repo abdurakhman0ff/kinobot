@@ -193,7 +193,7 @@ async def _copy(bot: Bot, chat_id: int, from_chat: int | str, message_id: int, c
 
 
 async def send_video(bot: Bot, chat_id: int, src: Row, caption: str, kb: InlineKeyboardMarkup,
-                     protect: bool) -> bool:
+                      protect: bool) -> bool:
     """Saqlash kanali -> zaxira kanal -> eski file_id tartibida urinadi."""
     sources = [
         (config.STORAGE_CHANNEL_ID, src.get("storage_message_id")),
@@ -238,7 +238,8 @@ async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None 
         else:
             caption, kb, src = card_caption(movie), await film_kb(bot, user["id"], movie), movie
 
-        if not await send_video(bot, chat_id, src, caption, kb, protect=bool(movie["is_vip"])):
+        # 🔒 HAMMA filmlar va seriallar uchun protect=True qilindi (boshqalarga uzatish va saqlash to'liq bloklanadi)
+        if not await send_video(bot, chat_id, src, caption, kb, protect=True):
             await bot.send_message(chat_id, t.VIDEO_UNAVAILABLE)
             where = t.ADMIN_EP_SUFFIX.format(season=ep["season"], number=ep["number"]) if ep else ""
             await notify.owner(
