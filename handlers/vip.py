@@ -7,6 +7,7 @@ from typing import Any
 from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, LabeledPrice, Message
 
 import config
@@ -37,15 +38,16 @@ async def vip_view(user: Row) -> tuple[str, InlineKeyboardMarkup]:
 
 
 def payload_of(tariff: Row, method: str) -> str:
-    # kun soni payload ichida: invoice va to'lov orasida tarif o'zgarsa ham to'g'ri hisoblanadi
     return f"vip:{tariff['id']}:{tariff['days']}:{method}"
 
 
 @router.callback_query(Nav.filter(F.to == "vip"))
 async def nav_vip(callback: CallbackQuery, bot: Bot, db_user: Row) -> None:
+    # ⚡ Darhol javob berish
+    await answer(callback)
+    
     text, markup = await vip_view(db_user)
     await render(bot, callback.from_user.id, callback.message, text, markup)
-    await answer(callback)
 
 
 @router.message(Command("vip"))
@@ -56,6 +58,9 @@ async def cmd_vip(message: Message, bot: Bot, db_user: Row) -> None:
 
 @router.callback_query(Vip.filter(F.a == "t"))
 async def choose_tariff(callback: CallbackQuery, callback_data: Vip, bot: Bot) -> None:
+    # ⚡ Darhol javob berish
+    await answer(callback)
+    
     tariff = await payments.tariff(callback_data.t)
     if not tariff or not tariff["is_active"]:
         await answer(callback, t.TARIFF_GONE, alert=True)
@@ -63,41 +68,56 @@ async def choose_tariff(callback: CallbackQuery, callback_data: Vip, bot: Bot) -
     text = t.TARIFF_CHOSEN.format(days=tariff["days"], price=som(tariff["price_uzs"]))
     if tariff.get("price_stars"):
         text += "\n" + t.TARIFF_STARS.format(stars=tariff["price_stars"])
+    
+    # Karta orqali to'lov tugmasi har doim aktiv bo'lishi uchun True uzatamiz
     await render(bot, callback.from_user.id, callback.message, text,
-                 pay_methods_kb(tariff, bool(config.CLICK_PROVIDER_TOKEN)))
+                 pay_methods_kb(tariff, True))
+
+
+# 1. Telegram Stars orqali avto-to'lov
+@router.callback_query(Vip.filter(F.a == "stars"))
+async def send_stars_invoice(callback: CallbackQuery, callback_data: Vip, bot: Bot) -> None:
     await answer(callback)
+    
+    tariff = await payments.tariff(callback_data.t)
+    if not tariff or not tariff["is_active"] or not tariff.get("price_stars"):
+        await answer(callback, t.TARIFF_GONE, alert=True)
+        return
+        
+    title = t.INVOICE_TITLE.format(days=tariff["days"])
+    description = t.INVOICE_DESCRIPTION.format(days=tariff["days"])
+    try:
+        await bot.send_invoice(
+            callback.from_user.id, title=title, description=description,
+            payload=payload_of(tariff, "stars"), currency="XTR", provider_token="",
+            prices=[LabeledPrice(label=title, amount=int(tariff["price_stars"]))],
+        )
+    except TelegramBadRequest as exc:
+        log.warning("Invoice yuborilmadi (stars): %s", exc)
+        await answer(callback, t.INVOICE_FAILED, alert=True)
 
 
-@router.callback_query(Vip.filter(F.a.in_({"stars", "click"})))
-async def send_invoice(callback: CallbackQuery, callback_data: Vip, bot: Bot) -> None:
+# 2. Karta orqali qo'lda (manual) to'lov (Click o'rniga rekvizit ko'rsatish)
+@router.callback_query(Vip.filter(F.a == "click"))
+async def send_manual_card_info(callback: CallbackQuery, callback_data: Vip, state: FSMContext) -> None:
+    await answer(callback)
+    
     tariff = await payments.tariff(callback_data.t)
     if not tariff or not tariff["is_active"]:
         await answer(callback, t.TARIFF_GONE, alert=True)
         return
-    title = t.INVOICE_TITLE.format(days=tariff["days"])
-    description = t.INVOICE_DESCRIPTION.format(days=tariff["days"])
-    try:
-        if callback_data.a == "stars":
-            if not tariff.get("price_stars"):
-                await answer(callback, t.TARIFF_GONE, alert=True)
-                return
-            await bot.send_invoice(
-                callback.from_user.id, title=title, description=description,
-                payload=payload_of(tariff, "stars"), currency="XTR", provider_token="",
-                prices=[LabeledPrice(label=title, amount=int(tariff["price_stars"]))],
-            )
-        else:
-            if not config.CLICK_PROVIDER_TOKEN:
-                await answer(callback, t.CLICK_DISABLED, alert=True)
-                return
-            await bot.send_invoice(
-                callback.from_user.id, title=title, description=description,
-                payload=payload_of(tariff, "click"), currency="UZS",
-                provider_token=config.CLICK_PROVIDER_TOKEN,
-                prices=[LabeledPrice(label=title, amount=int(tariff["price_uzs"]) * 100)],  # tiyinda
-            )
-    except TelegramBadRequest as exc:
-        log.warning("Invoice yuborilmadi (%s): %s", callback_data.a, exc)
-        await answer(callback, t.INVOICE_FAILED, alert=True)
-        return
-    await answer(callback)
+        
+    # ManualPaymentState import qilmasdan ham payments.py fayliga uzatish uchun state o'rnatamiz
+    from handlers.payments import ManualPaymentState
+    
+    await state.update_data(tariff_id=tariff["id"])
+    await state.set_state(ManualPaymentState.waiting_for_receipt)
+    
+    await callback.message.answer(
+        f"💳 **Karta orqali to'lov rekvizitlari:**\n\n"
+        f"📌 **Tarif:** {tariff['days']} kunlik VIP obuna\n"
+        f"💰 **Summa:** {som(tariff['price_uzs'])}\n\n"
+        f"💳 **Karta raqam:** `9860350140057646`\n"
+        f"👤 **Karta egasi:** A. K\n\n"
+        f"To'lovni amalga oshirgach, iltimos, **chek (skrinshot) rasmini** shu chatga yuboring."
+    )
