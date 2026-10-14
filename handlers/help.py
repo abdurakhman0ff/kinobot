@@ -47,6 +47,8 @@ def howto_text() -> str:
 
 @router.callback_query(Nav.filter(F.to.in_({"help", "howto", "paysup"})))
 async def nav_help(callback: CallbackQuery, callback_data: Nav, bot: Bot) -> None:
+    # ⚡ DARHOL JAVOB BERISH
+    await answer(callback)
     if callback_data.to == "help":
         text, markup = help_view()
     elif callback_data.to == "howto":
@@ -54,7 +56,6 @@ async def nav_help(callback: CallbackQuery, callback_data: Nav, bot: Bot) -> Non
     else:
         text, markup = paysupport_text(), kb([nav_row(Nav(to="help"))])
     await render(bot, callback.from_user.id, callback.message, text, markup)
-    await answer(callback)
 
 
 @router.message(Command("paysupport"))
