@@ -31,32 +31,40 @@ async def restore_kb(bot: Bot, user_id: int, movie: Row, k: str, episode_id: int
 
 @router.callback_query(Op.filter())
 async def open_from_list(callback: CallbackQuery, callback_data: Op, bot: Bot, db_user: Row) -> None:
+    # ⚡ DARHOL JAVOB BERISH
+    await answer(callback)
+    
     movie = await movies.get(callback_data.id)
     if not movie:
         await answer(callback, t.MOVIE_GONE, alert=True)
         return
-    await answer(callback)
     await delivery.open_movie(bot, db_user, callback.from_user.id, movie)
 
 
 @router.callback_query(Rnd.filter(F.a == "n"))
 async def random_next(callback: CallbackQuery, callback_data: Rnd, bot: Bot, db_user: Row) -> None:
+    # ⚡ DARHOL JAVOB BERISH
     await answer(callback)
     await delivery.show_random(bot, db_user, callback.from_user.id, callback.message, exclude=callback_data.id)
 
 
 @router.callback_query(Rnd.filter(F.a == "w"))
 async def random_watch(callback: CallbackQuery, callback_data: Rnd, bot: Bot, db_user: Row) -> None:
+    # ⚡ DARHOL JAVOB BERISH
+    await answer(callback)
+    
     movie = await movies.get(callback_data.id)
     if not movie:
         await answer(callback, t.MOVIE_GONE, alert=True)
         return
-    await answer(callback)
     await delivery.open_movie(bot, db_user, callback.from_user.id, movie)
 
 
 @router.callback_query(Card.filter(F.a.in_({"back", "tr", "act", "ac", "sim", "sv", "rep", "rp", "ss", "se"})))
 async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db_user: Row) -> None:
+    # ⚡ DARHOL JAVOB BERISH (Tugma bosilishi bilanoq Telegram qotishi yo'qoladi)
+    await answer(callback)
+    
     data = callback_data
     movie = await movies.get(data.m)
     if not movie:
@@ -66,10 +74,8 @@ async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db
 
     if data.a == "back":
         await edit_kb(callback.message, await restore_kb(bot, uid, movie, data.k, data.e))
-        await answer(callback)
 
     elif data.a == "se":
-        await answer(callback)
         await delivery.open_episode(bot, db_user, uid, data.v)
 
     elif data.a == "ss":
@@ -78,7 +84,6 @@ async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db
             await answer(callback, t.NO_EPISODES, alert=True)
             return
         await edit_kb(callback.message, episodes_kb(movie["id"], data.v, eps, data.p, data.k, data.e))
-        await answer(callback)
 
     elif data.a == "tr":
         if movie.get("trailer_url") is None and movie.get("tmdb_id"):
@@ -97,7 +102,6 @@ async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db
             await answer(callback, t.ACTORS_NOT_FOUND, alert=True)
             return
         await edit_kb(callback.message, actors_kb(movie["id"], cast, data.k))
-        await answer(callback)
 
     elif data.a == "ac":
         movie_ids, tv_ids = await tmdb.person_credits(data.v)
@@ -107,7 +111,6 @@ async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db
             await answer(callback, t.CATALOG_NO_OTHER, alert=True)
             return
         await edit_kb(callback.message, movies_back_kb(found, Card(a="act", m=movie["id"], k=data.k)))
-        await answer(callback)
 
     elif data.a == "sim":
         found = await movies.similar(movie)
@@ -115,7 +118,6 @@ async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db
             await answer(callback, t.NO_SIMILAR, alert=True)
             return
         await edit_kb(callback.message, movies_back_kb(found, Card(a="back", m=movie["id"], k=data.k)))
-        await answer(callback)
 
     elif data.a == "sv":
         saved = await movies.toggle_saved(uid, movie["id"])
@@ -124,7 +126,6 @@ async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db
 
     elif data.a == "rep":
         await edit_kb(callback.message, report_kb(movie["id"], data.e, data.k))
-        await answer(callback)
 
     elif data.a == "rp":
         if await misc.reported_recently(uid, movie["id"]):
