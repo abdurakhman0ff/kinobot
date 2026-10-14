@@ -76,7 +76,9 @@ async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db
         await edit_kb(callback.message, await restore_kb(bot, uid, movie, data.k, data.e))
 
     elif data.a == "se":
-        await delivery.open_episode(bot, db_user, uid, data.v)
+        # 🗑 Yangi qism yuborilishidan oldin eski video xabarini chatdan o'chirish uchun ID uzatamiz
+        old_msg_id = callback.message.message_id if callback.message else None
+        await delivery.open_episode(bot, db_user, uid, data.v, old_message_id=old_msg_id)
 
     elif data.a == "ss":
         eps = await movies.episodes(movie["id"], data.v)
