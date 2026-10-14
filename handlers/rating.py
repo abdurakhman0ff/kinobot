@@ -34,12 +34,16 @@ class CommentForm(StatesGroup):
 
 @router.callback_query(Card.filter(F.a == "rate"))
 async def rate_menu(callback: CallbackQuery, callback_data: Card) -> None:
-    await edit_kb(callback.message, rating_kb(callback_data.m, callback_data.k))
+    # ⚡ DARHOL JAVOB BERISH
     await answer(callback)
+    await edit_kb(callback.message, rating_kb(callback_data.m, callback_data.k))
 
 
 @router.callback_query(Card.filter(F.a == "rs"))
 async def rate_set(callback: CallbackQuery, callback_data: Card, state: FSMContext, bot: Bot) -> None:
+    # ⚡ DARHOL JAVOB BERISH
+    await answer(callback, t.RATED.format(score=callback_data.v))
+    
     score = callback_data.v
     movie = await movies.get(callback_data.m)
     if not movie or not 1 <= score <= 5:
@@ -52,7 +56,6 @@ async def rate_set(callback: CallbackQuery, callback_data: Card, state: FSMConte
     kb = await restore_kb(bot, uid, movie, callback_data.k)
     if not await edit_caption(callback.message, caption, kb):
         await edit_kb(callback.message, kb)
-    await answer(callback, t.RATED.format(score=score))
     await state.set_state(CommentForm.text)
     await state.update_data(movie_id=movie["id"])
     await bot.send_message(uid, t.COMMENT_PROMPT.format(max=COMMENT_MAX), reply_markup=comment_prompt_kb(movie["id"]))
@@ -60,13 +63,14 @@ async def rate_set(callback: CallbackQuery, callback_data: Card, state: FSMConte
 
 @router.callback_query(Card.filter(F.a == "cskip"))
 async def comment_skip(callback: CallbackQuery, state: FSMContext) -> None:
+    # ⚡ DARHOL JAVOB BERISH
+    await answer(callback)
     await state.clear()
     if isinstance(callback.message, Message):
         try:
             await callback.message.edit_text(t.COMMENT_SKIPPED)
         except TelegramAPIError:
             pass
-    await answer(callback)
 
 
 @router.message(CommentForm.text, F.text)
@@ -106,11 +110,13 @@ async def _comments_page(callback: CallbackQuery, movie: Row, page: int) -> None
     staff = users.has_role(callback.from_user.id, "moderator")
     deletable = [r["user_id"] for r in rows] if staff else []
     await edit_caption(callback.message, "\n\n".join(lines), comments_kb(movie["id"], page, pages, deletable))
-    await answer(callback)
 
 
 @router.callback_query(Card.filter(F.a.in_({"cm", "cmd", "cb"})))
 async def comments(callback: CallbackQuery, callback_data: Card, bot: Bot) -> None:
+    # ⚡ DARHOL JAVOB BERISH
+    await answer(callback)
+    
     movie = await movies.get(callback_data.m)
     if not movie:
         await answer(callback, t.MOVIE_GONE, alert=True)
@@ -118,7 +124,6 @@ async def comments(callback: CallbackQuery, callback_data: Card, bot: Bot) -> No
     if callback_data.a == "cb":
         kb = await delivery.film_kb(bot, callback.from_user.id, movie)
         await edit_caption(callback.message, card_caption(movie), kb)
-        await answer(callback)
         return
     if callback_data.a == "cmd":
         if not users.has_role(callback.from_user.id, "moderator"):
@@ -128,6 +133,5 @@ async def comments(callback: CallbackQuery, callback_data: Card, bot: Bot) -> No
         if not await movies.comment_count(movie["id"]):
             kb = await delivery.film_kb(bot, callback.from_user.id, movie)
             await edit_caption(callback.message, card_caption(movie), kb)
-            await answer(callback, t.COMMENT_DELETED)
             return
     await _comments_page(callback, movie, callback_data.p)
