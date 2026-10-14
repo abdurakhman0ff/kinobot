@@ -27,16 +27,18 @@ async def saved_view(user_id: int, page: int) -> tuple[str, InlineKeyboardMarkup
 
 @router.callback_query(Nav.filter(F.to == "saved"))
 async def nav_saved(callback: CallbackQuery, bot: Bot) -> None:
+    # ⚡ DARHOL JAVOB BERISH
+    await answer(callback)
     text, kb = await saved_view(callback.from_user.id, 0)
     await render(bot, callback.from_user.id, callback.message, text, kb)
-    await answer(callback)
 
 
 @router.callback_query(Pg.filter(F.k == "saved"))
 async def page_saved(callback: CallbackQuery, callback_data: Pg, bot: Bot) -> None:
+    # ⚡ DARHOL JAVOB BERISH
+    await answer(callback)
     text, kb = await saved_view(callback.from_user.id, callback_data.p)
     await render(bot, callback.from_user.id, callback.message, text, kb)
-    await answer(callback)
 
 
 @router.message(Command("saved"))
