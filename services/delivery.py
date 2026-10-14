@@ -160,7 +160,7 @@ async def open_movie(bot: Bot, user: Row, chat_id: int, movie: Row, checked: boo
         await deliver(bot, user, chat_id, movie)
 
 
-async def open_episode(bot: Bot, user: Row, chat_id: int, episode_id: int, checked: bool = False) -> bool:
+async def open_episode(bot: Bot, user: Row, chat_id: int, episode_id: int, checked: bool = False, old_message_id: int | None = None) -> bool:
     ep = await movies.episode(episode_id)
     movie = await movies.get(ep["movie_id"]) if ep else None
     if not ep or not movie:
@@ -168,7 +168,7 @@ async def open_episode(bot: Bot, user: Row, chat_id: int, episode_id: int, check
         return False
     if not checked and not await subscription.ensure(bot, user, chat_id, {"a": "ep", "id": episode_id}):
         return False
-    return await deliver(bot, user, chat_id, movie, ep)
+    return await deliver(bot, user, chat_id, movie, ep, old_message_id=old_message_id)
 
 
 # ---------- yuborish ----------
@@ -193,7 +193,7 @@ async def _copy(bot: Bot, chat_id: int, from_chat: int | str, message_id: int, c
 
 
 async def send_video(bot: Bot, chat_id: int, src: Row, caption: str, kb: InlineKeyboardMarkup,
-                      protect: bool) -> bool:
+                     protect: bool) -> bool:
     """Saqlash kanali -> zaxira kanal -> eski file_id tartibida urinadi."""
     sources = [
         (config.STORAGE_CHANNEL_ID, src.get("storage_message_id")),
@@ -215,7 +215,7 @@ async def send_video(bot: Bot, chat_id: int, src: Row, caption: str, kb: InlineK
     return False
 
 
-async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None = None) -> bool:
+async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None = None, old_message_id: int | None = None) -> bool:
     """Obuna tekshiruvidan keyin chaqiriladi: VIP qulf -> limit -> yuborish -> hisob."""
     privileged = users.is_privileged(user)
     if movie["is_vip"] and not privileged:
@@ -238,21 +238,11 @@ async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None 
         else:
             caption, kb, src = card_caption(movie), await film_kb(bot, user["id"], movie), movie
 
-        # 🔒 HAMMA filmlar va seriallar uchun protect=True qilindi (boshqalarga uzatish va saqlash to'liq bloklanadi)
-        if not await send_video(bot, chat_id, src, caption, kb, protect=True):
-            await bot.send_message(chat_id, t.VIDEO_UNAVAILABLE)
-            where = t.ADMIN_EP_SUFFIX.format(season=ep["season"], number=ep["number"]) if ep else ""
-            await notify.owner(
-                bot,
-                t.ADMIN_VIDEO_MISSING.format(code=movie["code"], title=esc(movie["title"]), where=where),
-                key=f"missing:{movie['id']}:{ep['id'] if ep else 0}",
-                every=600,
-            )
-            return False
+        # 🗑 Agar oldingi xabar ID si kelgan bo'lsa, yangi video yuborishdan oldin uni o'chiramiz
+        if old_message_id:
+            try:
+                await bot.delete_message(chat_id, old_message_id)
+            except Exception:
+                pass
 
-        await movies.record_view(user["id"], movie["id"], ep["id"] if ep else None)
-        if ep:
-            await movies.set_progress(user["id"], movie["id"], ep["season"], ep["number"])
-        if not privileged:
-            await limits.consume(user["id"], kind, item_key)
-    return True
+        # 🔒 HAMMA filmlar va seriallar uchun protect=True
