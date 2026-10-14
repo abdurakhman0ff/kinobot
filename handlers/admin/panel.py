@@ -4,7 +4,7 @@ from __future__ import annotations
 from aiogram import Bot, F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 import texts as t
 from handlers.admin.common import RoleFilter, panel_kb
@@ -33,3 +33,16 @@ async def show_panel(callback: CallbackQuery, state: FSMContext, bot: Bot, role:
     await state.clear()
     await render(bot, callback.from_user.id, callback.message, panel_text(role), panel_kb(callback.from_user.id))
     await answer(callback, t.CANCELLED if cancelled else None)
+
+
+# Qo'shimcha: Admin panelidan chiqib, oddiy menyuga qaytganda eski klaviaturani tozalash uchun
+@router.callback_query(F.data == "nav:main", StateFilter("*"))
+async def exit_admin_panel(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
+    await state.clear()
+    await answer(callback)
+    # Eski reply klaviaturani o'chirish uchun vaqtinchalik xabar yuborib o'chiramiz
+    remove_msg = await callback.message.answer("Asosiy menyuga qaytildi:", reply_markup=ReplyKeyboardRemove())
+    try:
+        await remove_msg.delete()
+    except Exception:
+        pass
