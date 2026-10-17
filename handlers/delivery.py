@@ -62,7 +62,7 @@ async def random_watch(callback: CallbackQuery, callback_data: Rnd, bot: Bot, db
 
 @router.callback_query(Card.filter(F.a.in_({"back", "tr", "act", "ac", "sim", "sv", "rep", "rp", "ss", "se"})))
 async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db_user: Row) -> None:
-    # ⚡ DARHOL JAVOB BERISH (Tugma bosilishi bilanoq Telegram qotishi yo'qoladi)
+    # ⚡ DARHOL JAVOB BERISH
     await answer(callback)
     
     data = callback_data
@@ -76,10 +76,9 @@ async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db
         await edit_kb(callback.message, await restore_kb(bot, uid, movie, data.k, data.e))
 
     elif data.a == "se":
-        # 💡 Faqat video xabarlardagi "Keyingi/Oldingi qism" tugmalari bosilganda oldingi videoni o'chiramiz.
-        # Fasllar menyusidan qism tanlanganda esa menyu o'chib ketmaydi.
-        is_video_msg = bool(callback.message and (callback.message.video or callback.message.document))
-        old_msg_id = callback.message.message_id if is_video_msg else None
+        # 🗑 Qismlar menyusi yoki oldingi video xabaridan qat'i nazar,
+        # tugma bosilgan o'sha xabarning o'zini darhol o'chiramiz va yangi qismni yuboramiz.
+        old_msg_id = callback.message.message_id if callback.message else None
         await delivery.open_episode(bot, db_user, uid, data.v, old_message_id=old_msg_id)
 
     elif data.a == "ss":
