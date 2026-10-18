@@ -106,13 +106,19 @@ async def newest(limit: int, offset: int = 0) -> list[Row]:
 
 
 async def top(period: str, offset: int, limit: int) -> tuple[int, list[Row]]:
+    """Top kinolar. Har doim 'cnt' ustuni qaytariladi (KeyError oldini olish uchun)."""
     if period == "a":
+        # ✅ Barcha vaqt: views ni cnt deb alias qilamiz
         total = int(await db.fetchval("SELECT COUNT(*) FROM movies WHERE views > 0", default=0))
         rows = await db.fetchall(
-            f"SELECT {SHORT} FROM movies m WHERE m.views > 0 ORDER BY m.views DESC, m.id DESC LIMIT ? OFFSET ?",
+            f"""SELECT {SHORT}, m.views AS cnt FROM movies m
+                WHERE m.views > 0
+                ORDER BY m.views DESC, m.id DESC
+                LIMIT ? OFFSET ?""",
             (limit, offset),
         )
         return total, rows
+
     since = ago_db(days=7 if period == "w" else 30)
     total = int(await db.fetchval(
         "SELECT COUNT(DISTINCT movie_id) FROM views WHERE created_at >= ?", (since,), default=0
@@ -266,7 +272,7 @@ async def movie_part_by_id(part_id: int) -> Row | None:
     return await db.fetchone("SELECT * FROM movie_parts WHERE id = ?", (part_id,))
 
 
-async def add_movie_part(movie_id: int, part_number: int, file_id: str, 
+async def add_movie_part(movie_id: int, part_number: int, file_id: str,
                          storage_message_id: int | None = None, backup_message_id: int | None = None) -> int:
     return await db.insert(
         """INSERT INTO movie_parts (movie_id, part_number, file_id, storage_message_id, backup_message_id, created_at)
@@ -274,16 +280,15 @@ async def add_movie_part(movie_id: int, part_number: int, file_id: str,
         (movie_id, part_number, file_id, storage_message_id, backup_message_id, now_db())
     )
 
-async def episode(episode_id: int) -> Row | None:
-    return await movie_part_by_id(episode_id)
-    
-# ---------- franshiza va qismlar uchun qo'shimchalar ----------
 
 async def episode(part_id: int) -> Row | None:
+    """Bitta qismni ID bo'yicha olish."""
     return await movie_part_by_id(part_id)
+
 
 async def episodes(movie_id: int, season_or_part: int = 0) -> list[Row]:
     return await movie_parts(movie_id)
+
 
 async def neighbor(movie_id: int, part_id: int) -> tuple[int | None, int | None]:
     parts = await movie_parts(movie_id)
@@ -297,5 +302,7 @@ async def neighbor(movie_id: int, part_id: int) -> tuple[int | None, int | None]
     prev_id = ids[idx - 1] if idx > 0 else None
     next_id = ids[idx + 1] if idx < len(ids) - 1 else None
     return prev_id, next_id
+
+
 async def top_since(since_date: str = "", limit: int = 10) -> list[Row]:
     return await db.fetchall("SELECT * FROM movies ORDER BY id DESC LIMIT ?", (limit,))
