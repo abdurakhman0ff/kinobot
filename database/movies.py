@@ -85,3 +85,23 @@ async def open_movie_part(callback: CallbackQuery, callback_data: Card, bot: Bot
         pass
 
     await answer(callback)
+
+# ---------- ro'yxatlar ----------
+
+def _type_cond(kind: str) -> str:
+    if kind == "series":
+        return "m.type = 'serial'"
+    elif kind == "cartoons":
+        return "m.type = 'multfilm'"
+    return "m.type = 'film'"
+
+
+async def catalog(kind: str, offset: int, limit: int) -> tuple[int, list[Row]]:
+    """Katalog bo'yicha kinolarni sahifalab olish."""
+    cond = _type_cond(kind)
+    total = int(await db.fetchval(f"SELECT COUNT(*) FROM movies m WHERE {cond}", default=0))
+    rows = await db.fetchall(
+        f"SELECT {SHORT} FROM movies m WHERE {cond} ORDER BY m.created_at DESC, m.id DESC LIMIT ? OFFSET ?",
+        (limit, offset),
+    )
+    return total, rows
