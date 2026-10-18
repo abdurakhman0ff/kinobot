@@ -88,3 +88,51 @@ async def open_movie_part(callback: CallbackQuery, callback_data: Card, bot: Bot
         pass
 
     await answer(callback)
+
+@router.callback_query(Card.filter(F.a == "open"))
+async def open_movie_part(callback: CallbackQuery, callback_data: Card, bot: Bot, db_user: Any) -> None:
+    """Foydalanuvchi qism tugmasini (1-qism, 2-qism...) bosganda ishlaydi."""
+    movie = await movies.get(callback_data.m)
+    if not movie:
+        await answer(callback, t.MOVIE_GONE, alert=True)
+        return
+
+    uid = callback.from_user.id
+    old_msg_id = callback.message.message_id if callback.message else None
+    
+    # Eski xabarni o'chirib, tanlangan qismni yuborish
+    if old_msg_id:
+        try:
+            await bot.delete_message(uid, old_msg_id)
+        except TelegramBadRequest:
+            pass
+
+    bot_info = await bot.get_me()
+    is_saved = await movies.is_saved(uid, movie["id"])
+    parts = await movies.movie_parts(movie["id"])
+    
+    # Hozir bosilgan qismni qizil nuqta bilan belgilab klaviatura yasash
+    reply_markup = film_card_kb(movie, bot_info.username, is_saved, parts=parts, current_part_id=callback_data.v)
+    caption = card_caption(movie)
+
+    # Tanlangan qismning fayl ID sini olish
+    part = await movies.movie_part_by_id(callback_data.v)
+    file_id = part.get("file_id") if part else movie.get("file_id")
+
+    if file_id:
+        try:
+            await bot.send_video(uid, file_id, caption=caption, reply_markup=reply_markup)
+            await movies.record_view(uid, movie["id"], None)
+            await answer(callback)
+            return
+        except TelegramBadRequest as exc:
+            log.warning("Qism videosini yuborishda xatolik: %s", exc)
+
+    photo = movie.get("poster_file_id")
+    if photo:
+        await bot.send_photo(uid, photo, caption=caption, reply_markup=reply_markup)
+    else:
+        await bot.send_message(uid, caption, reply_markup=reply_markup)
+        
+    await movies.record_view(uid, movie["id"], None)
+    await answer(callback)
