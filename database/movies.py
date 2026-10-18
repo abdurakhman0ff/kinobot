@@ -297,10 +297,10 @@ async def neighbor(movie_id: int, part_id: int) -> tuple[int | None, int | None]
     prev_id = ids[idx - 1] if idx > 0 else None
     next_id = ids[idx + 1] if idx < len(ids) - 1 else None
     return prev_id, next_id
-async def top_since(days: int = 7) -> list[Row]:
-    """Oxirgi kunlar ichida eng ko'p ko'rilgan yoki qo'shilgan kinolarni qaytarish."""
+async def top_since(since_date: str = "", limit: int = 10) -> list[Row]:
+    """Berilgan sanadan keyingi yoki oxirgi kinolarni limit bo'yicha qaytarish."""
     async with db.execute(
-        "SELECT * FROM movies ORDER BY id DESC LIMIT 10"
+        "SELECT * FROM movies ORDER BY id DESC LIMIT ?", (limit,)
     ) as cursor:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
