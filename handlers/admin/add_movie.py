@@ -541,7 +541,77 @@ async def post_time(message: Message, state: FSMContext, bot: Bot) -> None:
     when = parse_local(message.text)
     if not when or when <= utcnow():
         await message.answer(t.BAD_DATETIME)
+        return# ---------- Mavjud kinoga qism qo'shish (Part FSM) ----------
+
+class AddMoviePart(StatesGroup):
+    waiting_for_code = State()
+    waiting_for_number = State()
+    waiting_for_file = State()
+
+
+# Admin menyusidan "Qism qo'shish" bosilganda ishga tushadigan handler
+@router.message(Command("add_part"), StateFilter("*"))
+async def cmd_add_part(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await state.set_state(AddMoviePart.waiting_for_code)
+    await message.answer("🎬 Qaysi kinoga qism qo'shmoqchisiz? Asosiy kino **kodini** kiriting:", reply_markup=cancel_kb())
+
+
+@router.message(AddMoviePart.waiting_for_code, F.text)
+async def part_got_code(message: Message, state: FSMContext) -> None:
+    code = parse_int(message.text)
+    if not code:
+        await message.answer("❌ Iltimos, to'g'ri kod kiriting:")
         return
+    
+    movie = await movies.get_by_code(code)
+    if not movie:
+        await message.answer("❌ Bu kod bilan kino topilmadi. Qaytadan kiriting:")
+        return
+    
+    await state.update_data(parent_movie_id=movie["id"])
+    await state.set_state(AddMoviePart.waiting_for_number)
+    await message.answer(f"✅ <b>{esc(movie['title'])}</b> topildi.\n\nBu nechanchi qism? (Masalan: 2, 3...):", reply_markup=cancel_kb())
+
+
+@router.message(AddMoviePart.waiting_for_number, F.text)
+async def part_got_number(message: Message, state: FSMContext) -> None:
+    num = parse_int(message.text)
+    if not num or num < 1:
+        await message.answer("❌ Noto'g'ri raqam. Qism raqamini 1 dan katta qilib kiriting:")
+        return
+    
+    await state.update_data(part_number=num)
+    await state.set_state(AddMoviePart.waiting_for_file)
+    await message.answer(f"📥 Endi {num}-qismning **video faylini** yuboring:", reply_markup=cancel_kb())
+
+
+@router.message(AddMoviePart.waiting_for_file, F.video)
+async def part_got_file(message: Message, state: FSMContext, bot: Bot) -> None:
+    try:
+        stored = await store_media(bot, message)
+    except TelegramAPIError as exc:
+        await message.answer(t.ADD_STORAGE_ERROR.format(error=esc(str(exc))), reply_markup=cancel_kb())
+        return
+    
+    if not stored:
+        await message.answer(t.ADD_NEED_VIDEO, reply_markup=cancel_kb())
+        return
+    
+    storage_id, backup_id, file_id = stored
+    data = await state.get_data()
+    
+    # Bazaga saqlaymiz
+    await movies.add_movie_part(
+        movie_id=data["parent_movie_id"],
+        part_number=data["part_number"],
+        file_id=file_id,
+        storage_message_id=storage_id,
+        backup_message_id=backup_id
+    )
+    
+    await state.clear()
+    await message.answer(f"✅ Muvaffaqiyatli! Kinoning **{data['part_number']}-qismi** qo'shildi.", reply_markup=back_panel_kb())
     data = await state.get_data()
     movie = await movies.get(int(data.get("post_movie_id", 0)))
     if not movie:
@@ -551,3 +621,5 @@ async def post_time(message: Message, state: FSMContext, bot: Bot) -> None:
     await misc.add_scheduled(movie["id"], to_db(when), message.from_user.id)  # type: ignore[union-attr]
     await message.answer(t.POST_SCHEDULED.format(time=fmt_local(when)))
     await finish(bot, message.chat.id, state, movie)
+
+
