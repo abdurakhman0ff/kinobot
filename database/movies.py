@@ -130,7 +130,54 @@ async def random_one(exclude_id: int = 0) -> Row | None:
     return row or await db.fetchone("SELECT * FROM movies ORDER BY RANDOM() LIMIT 1")
 
 
-# ---------- saqlanganlar va ko'rishlar ----------
+# ---------- filter ----------
+
+YEAR_RANGES: list[tuple[str, int, int]] = [
+    ("2020-2026", 2020, 2026),
+    ("2010-2019", 2010, 2019),
+    ("2000-2009", 2000, 2009),
+    ("2000 gacha", 0, 1999),
+]
+TYPE_CODES = {"f": "film", "s": "serial", "m": "multfilm"}
+
+
+async def languages() -> list[str]:
+    rows = await db.fetchall("SELECT DISTINCT languages FROM movies WHERE languages IS NOT NULL AND languages != ''")
+    found: set[str] = set()
+    for r in rows:
+        found.update(split_csv(r["languages"]))
+    return sorted(found)
+
+
+def _filter_where(type_code: str, language: str | None, year_idx: int) -> tuple[str, list[Any]]:
+    conds, params = ["1"], []
+    if type_code in TYPE_CODES:
+        conds.append("m.type = ?")
+        params.append(TYPE_CODES[type_code])
+    if language:
+        conds.append("(',' || REPLACE(m.languages, ', ', ',') || ',') LIKE ?")
+        params.append(f"%,{language},%")
+    if 0 <= year_idx < len(YEAR_RANGES):
+        _, lo, hi = YEAR_RANGES[year_idx]
+        conds.append("m.year BETWEEN ? AND ?")
+        params += [lo, hi]
+    return " AND ".join(conds), params
+
+
+async def filter_count(type_code: str, language: str | None, year_idx: int) -> int:
+    where, params = _filter_where(type_code, language, year_idx)
+    return int(await db.fetchval(f"SELECT COUNT(*) FROM movies m WHERE {where}", params, default=0))
+
+
+async def filter_page(type_code: str, language: str | None, year_idx: int, offset: int, limit: int) -> list[Row]:
+    where, params = _filter_where(type_code, language, year_idx)
+    return await db.fetchall(
+        f"SELECT {SHORT} FROM movies m WHERE {where} ORDER BY m.created_at DESC, m.id DESC LIMIT ? OFFSET ?",
+        (*params, limit, offset),
+    )
+
+
+# ---------- saqlanganlar ----------
 
 async def is_saved(user_id: int, movie_id: int) -> bool:
     return bool(await db.fetchval("SELECT 1 FROM saved WHERE user_id = ? AND movie_id = ?", (user_id, movie_id)))
@@ -144,6 +191,18 @@ async def toggle_saved(user_id: int, movie_id: int) -> bool:
                      (user_id, movie_id, now_db()))
     return True
 
+
+async def saved_page(user_id: int, offset: int, limit: int) -> tuple[int, list[Row]]:
+    total = int(await db.fetchval("SELECT COUNT(*) FROM saved WHERE user_id = ?", (user_id,), default=0))
+    rows = await db.fetchall(
+        f"""SELECT {SHORT} FROM saved s JOIN movies m ON m.id = s.movie_id
+            WHERE s.user_id = ? ORDER BY s.created_at DESC LIMIT ? OFFSET ?""",
+        (user_id, limit, offset),
+    )
+    return total, rows
+
+
+# ---------- ko'rishlar ----------
 
 async def record_view(user_id: int, movie_id: int, episode_id: int | None) -> None:
     async with db.tx():
