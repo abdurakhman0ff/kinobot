@@ -273,3 +273,6 @@ async def add_movie_part(movie_id: int, part_number: int, file_id: str,
            VALUES (?, ?, ?, ?, ?, ?)""",
         (movie_id, part_number, file_id, storage_message_id, backup_message_id, now_db())
     )
+
+async def episode(episode_id: int) -> Row | None:
+    return await movie_part_by_id(episode_id)
