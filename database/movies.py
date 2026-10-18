@@ -1,90 +1,83 @@
-"""Foydalanuvchiga kinolarni va ularning qismlarini yuborish handlerlari."""
+"""Kinolar, qismlar, reyting, saqlanganlar, ko'rishlar."""
 from __future__ import annotations
 
-import logging
 from typing import Any
 
-from aiogram import Bot, F, Router
-from aiogram.enums import ChatType
-from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message
+from database.db import db
+from utils.text import split_csv
+from utils.time import ago_db, now_db
 
-import texts as t
-from database import movies
-from keyboards.callbacks import Card
-from keyboards.user import film_card_kb
-from services.cards import card_caption
-from utils.text import parse_int
-from utils.ui import answer
+Row = dict[str, Any]
 
-router = Router()
-log = logging.getLogger(__name__)
+MOVIE_FIELDS = {
+    "code", "type", "title", "original_title", "year", "genres", "countries", "runtime_min",
+    "quality", "languages", "description", "tmdb_id", "imdb_id", "poster_path", "poster_file_id",
+    "storage_message_id", "backup_message_id", "file_id", "is_vip", "trailer_url",
+}
+
+SHORT = "m.id, m.code, m.type, m.title, m.year, m.is_vip, m.views"
 
 
-async def send_movie_card(bot: Bot, chat_id: int, movie: dict[str, Any], user_id: int) -> None:
-    """Kino kartochkasini barcha qismlari tugmalari bilan birga yuborish."""
-    bot_info = await bot.get_me()
-    is_saved = await movies.is_saved(user_id, movie["id"])
-    
-    # 1. Kinoning barcha qismlarini bazadan olamiz (franshizalar uchun)
-    parts = await movies.movie_parts(movie["id"])
-    
-    # 2. Qismlarni klaviaturaga uzatamiz
-    reply_markup = film_card_kb(movie, bot_info.username, is_saved, parts=parts)
-    caption = card_caption(movie)
-    photo = movie.get("poster_file_id")
-
-    if photo:
-        try:
-            await bot.send_photo(chat_id, photo, caption=caption, reply_markup=reply_markup)
-            return
-        except TelegramBadRequest as exc:
-            log.warning("Poster yuborishda xatolik: %s", exc)
-
-    await bot.send_message(chat_id, caption, reply_markup=reply_markup)
+def rating_of(movie: Row) -> float | None:
+    count = movie.get("rating_count") or 0
+    return round(movie["rating_sum"] / count, 2) if count else None
 
 
-@router.message(F.chat.type == ChatType.PRIVATE, F.text)
-async def handle_movie_code(message: Message, bot: Bot) -> None:
-    """Foydalanuvchi chatga kino kodini yozganda ishlaydi."""
-    code = parse_int(message.text)
-    if not code or code <= 0:
+# ---------- kino ----------
+
+async def get(movie_id: int) -> Row | None:
+    return await db.fetchone("SELECT * FROM movies WHERE id = ?", (movie_id,))
+
+
+async def by_code(code: int) -> Row | None:
+    return await db.fetchone("SELECT * FROM movies WHERE code = ?", (code,))
+
+
+async def next_code() -> int:
+    return int(await db.fetchval("SELECT MAX(code) FROM movies", default=0)) + 1
+
+
+async def code_taken(code: int, exclude_id: int | None = None) -> bool:
+    return bool(await db.fetchval(
+        "SELECT 1 FROM movies WHERE code = ? AND id != ?", (code, exclude_id or 0)
+    ))
+
+
+async def create(fields: dict[str, Any]) -> int:
+    data = {k: v for k, v in fields.items() if k in MOVIE_FIELDS}
+    data["created_at"] = data["updated_at"] = now_db()
+    cols = ", ".join(data)
+    marks = ", ".join("?" for _ in data)
+    return await db.insert(f"INSERT INTO movies ({cols}) VALUES ({marks})", tuple(data.values()))
+
+
+async def update(movie_id: int, **fields: Any) -> None:
+    data = {k: v for k, v in fields.items() if k in MOVIE_FIELDS}
+    if not data:
         return
-
-    movie = await movies.by_code(code)
-    if not movie:
-        await message.answer(t.NOT_FOUND.format(code=code))
-        return
-
-    await send_movie_card(bot, message.chat.id, movie, message.from_user.id)
+    data["updated_at"] = now_db()
+    sets = ", ".join(f"{k} = ?" for k in data)
+    await db.execute(f"UPDATE movies SET {sets} WHERE id = ?", (*data.values(), movie_id))
 
 
-@router.callback_query(Card.filter(F.a == "open"))
-async def open_movie_part(callback: CallbackQuery, callback_data: Card, bot: Bot) -> None:
-    """Foydalanuvchi qism tugmasini (1-qism, 2-qism...) bosganda boshqa qismga o'tish."""
-    movie = await movies.get(callback_data.m)
-    if not movie:
-        await answer(callback, t.MOVIE_GONE, alert=True)
-        return
+async def delete(movie_id: int) -> None:
+    await db.execute("DELETE FROM movies WHERE id = ?", (movie_id,))
 
-    bot_info = await bot.get_me()
-    is_saved = await movies.is_saved(callback.from_user.id, movie["id"])
-    
-    # Asosiy kinoning barcha qismlarini olish
-    parts = await movies.movie_parts(movie["id"])
-    reply_markup = film_card_kb(movie, bot_info.username, is_saved, parts=parts)
-    caption = card_caption(movie)
 
-    try:
-        if callback.message.photo:
-            await callback.message.edit_caption(caption=caption, reply_markup=reply_markup)
-        else:
-            await callback.message.edit_text(text=caption, reply_markup=reply_markup)
-    except TelegramBadRequest:
-        pass
+async def all_for_index() -> list[Row]:
+    return await db.fetchall(
+        "SELECT id, code, type, title, original_title, year, is_vip, views FROM movies"
+    )
 
-    await answer(callback)
+
+async def by_ids(ids: list[int]) -> list[Row]:
+    if not ids:
+        return []
+    marks = ",".join("?" for _ in ids)
+    rows = await db.fetchall(f"SELECT * FROM movies WHERE id IN ({marks})", ids)
+    order = {mid: i for i, mid in enumerate(ids)}
+    return sorted(rows, key=lambda r: order[r["id"]])
+
 
 # ---------- ro'yxatlar ----------
 
@@ -97,7 +90,6 @@ def _type_cond(kind: str) -> str:
 
 
 async def catalog(kind: str, offset: int, limit: int) -> tuple[int, list[Row]]:
-    """Katalog bo'yicha kinolarni sahifalab olish."""
     cond = _type_cond(kind)
     total = int(await db.fetchval(f"SELECT COUNT(*) FROM movies m WHERE {cond}", default=0))
     rows = await db.fetchall(
@@ -105,3 +97,77 @@ async def catalog(kind: str, offset: int, limit: int) -> tuple[int, list[Row]]:
         (limit, offset),
     )
     return total, rows
+
+
+async def newest(limit: int, offset: int = 0) -> list[Row]:
+    return await db.fetchall(
+        "SELECT * FROM movies m ORDER BY m.created_at DESC, m.id DESC LIMIT ? OFFSET ?", (limit, offset)
+    )
+
+
+async def top(period: str, offset: int, limit: int) -> tuple[int, list[Row]]:
+    if period == "a":
+        total = int(await db.fetchval("SELECT COUNT(*) FROM movies WHERE views > 0", default=0))
+        rows = await db.fetchall(
+            f"SELECT {SHORT} FROM movies m WHERE m.views > 0 ORDER BY m.views DESC, m.id DESC LIMIT ? OFFSET ?",
+            (limit, offset),
+        )
+        return total, rows
+    since = ago_db(days=7 if period == "w" else 30)
+    total = int(await db.fetchval(
+        "SELECT COUNT(DISTINCT movie_id) FROM views WHERE created_at >= ?", (since,), default=0
+    ))
+    rows = await db.fetchall(
+        f"""SELECT {SHORT}, COUNT(v.id) AS cnt FROM views v JOIN movies m ON m.id = v.movie_id
+            WHERE v.created_at >= ? GROUP BY m.id ORDER BY cnt DESC, m.id DESC LIMIT ? OFFSET ?""",
+        (since, limit, offset),
+    )
+    return total, rows
+
+
+async def random_one(exclude_id: int = 0) -> Row | None:
+    row = await db.fetchone("SELECT * FROM movies WHERE id != ? ORDER BY RANDOM() LIMIT 1", (exclude_id,))
+    return row or await db.fetchone("SELECT * FROM movies ORDER BY RANDOM() LIMIT 1")
+
+
+# ---------- saqlanganlar va ko'rishlar ----------
+
+async def is_saved(user_id: int, movie_id: int) -> bool:
+    return bool(await db.fetchval("SELECT 1 FROM saved WHERE user_id = ? AND movie_id = ?", (user_id, movie_id)))
+
+
+async def toggle_saved(user_id: int, movie_id: int) -> bool:
+    if await is_saved(user_id, movie_id):
+        await db.execute("DELETE FROM saved WHERE user_id = ? AND movie_id = ?", (user_id, movie_id))
+        return False
+    await db.execute("INSERT OR IGNORE INTO saved (user_id, movie_id, created_at) VALUES (?, ?, ?)",
+                     (user_id, movie_id, now_db()))
+    return True
+
+
+async def record_view(user_id: int, movie_id: int, episode_id: int | None) -> None:
+    async with db.tx():
+        await db.execute("INSERT INTO views (user_id, movie_id, episode_id, created_at) VALUES (?, ?, ?, ?)",
+                         (user_id, movie_id, episode_id, now_db()))
+        await db.execute("UPDATE movies SET views = views + 1 WHERE id = ?", (movie_id,))
+
+
+# ---------- kino qismlari (franshizalar uchun) ----------
+
+async def movie_parts(movie_id: int) -> list[Row]:
+    return await db.fetchall(
+        "SELECT * FROM movie_parts WHERE movie_id = ? ORDER BY part_number ASC", (movie_id,)
+    )
+
+
+async def movie_part_by_id(part_id: int) -> Row | None:
+    return await db.fetchone("SELECT * FROM movie_parts WHERE id = ?", (part_id,))
+
+
+async def add_movie_part(movie_id: int, part_number: int, file_id: str, 
+                         storage_message_id: int | None = None, backup_message_id: int | None = None) -> int:
+    return await db.insert(
+        """INSERT INTO movie_parts (movie_id, part_number, file_id, storage_message_id, backup_message_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (movie_id, part_number, file_id, storage_message_id, backup_message_id, now_db())
+    )
