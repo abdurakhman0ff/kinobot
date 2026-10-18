@@ -39,14 +39,29 @@ async def send_movie_card(bot: Bot, chat_id: int, movie: dict[str, Any], user_id
     caption = card_caption(movie)
     photo = movie.get("poster_file_id")
 
+    # Agar asosiy kinoda video fayl bo'lsa yoki 1-qism mavjud bo'lsa
+    file_id = movie.get("file_id")
+    if parts:
+        file_id = parts[0].get("file_id") or file_id
+
+    if file_id:
+        try:
+            await bot.send_video(chat_id, file_id, caption=caption, reply_markup=reply_markup)
+            await movies.record_view(user_id, movie["id"], None)
+            return
+        except TelegramBadRequest as exc:
+            log.warning("Video yuborishda xatolik: %s", exc)
+
     if photo:
         try:
             await bot.send_photo(chat_id, photo, caption=caption, reply_markup=reply_markup)
+            await movies.record_view(user_id, movie["id"], None)
             return
         except TelegramBadRequest as exc:
             log.warning("Poster yuborishda xatolik: %s", exc)
 
     await bot.send_message(chat_id, caption, reply_markup=reply_markup)
+    await movies.record_view(user_id, movie["id"], None)
 
 
 @router.message(F.chat.type == ChatType.PRIVATE, F.text)
@@ -65,32 +80,7 @@ async def handle_movie_code(message: Message, bot: Bot) -> None:
 
 
 @router.callback_query(Card.filter(F.a == "open"))
-async def open_movie_part(callback: CallbackQuery, callback_data: Card, bot: Bot) -> None:
-    """Foydalanuvchi qism tugmasini (1-qism, 2-qism...) bosganda boshqa qismga o'tish."""
-    movie = await movies.get(callback_data.m)
-    if not movie:
-        await answer(callback, t.MOVIE_GONE, alert=True)
-        return
-
-    bot_info = await bot.get_me()
-    is_saved = await movies.is_saved(callback.from_user.id, movie["id"])
-    
-    parts = await movies.movie_parts(movie["id"])
-    reply_markup = film_card_kb(movie, bot_info.username, is_saved, parts=parts)
-    caption = card_caption(movie)
-
-    try:
-        if callback.message.photo:
-            await callback.message.edit_caption(caption=caption, reply_markup=reply_markup)
-        else:
-            await callback.message.edit_text(text=caption, reply_markup=reply_markup)
-    except TelegramBadRequest:
-        pass
-
-    await answer(callback)
-
-@router.callback_query(Card.filter(F.a == "open"))
-async def open_movie_part(callback: CallbackQuery, callback_data: Card, bot: Bot, db_user: Any) -> None:
+async def open_movie_part(callback: CallbackQuery, callback_data: Card, bot: Bot, db_user: Any = None) -> None:
     """Foydalanuvchi qism tugmasini (1-qism, 2-qism...) bosganda ishlaydi."""
     movie = await movies.get(callback_data.m)
     if not movie:
