@@ -177,6 +177,49 @@ async def filter_page(type_code: str, language: str | None, year_idx: int, offse
     )
 
 
+# ---------- reyting va izohlar ----------
+
+async def user_rating(user_id: int, movie_id: int) -> Row | None:
+    return await db.fetchone("SELECT * FROM ratings WHERE user_id = ? AND movie_id = ?", (user_id, movie_id))
+
+
+async def set_rating(user_id: int, movie_id: int, score: int) -> None:
+    async with db.tx():
+        old = await user_rating(user_id, movie_id)
+        if old:
+            await db.execute("UPDATE ratings SET score = ?, created_at = ? WHERE user_id = ? AND movie_id = ?",
+                             (score, now_db(), user_id, movie_id))
+            await db.execute("UPDATE movies SET rating_sum = rating_sum + ? WHERE id = ?",
+                             (score - old["score"], movie_id))
+        else:
+            await db.execute("INSERT INTO ratings (user_id, movie_id, score, created_at) VALUES (?, ?, ?, ?)",
+                             (user_id, movie_id, score, now_db()))
+            await db.execute("UPDATE movies SET rating_sum = rating_sum + ?, rating_count = rating_count + 1 WHERE id = ?",
+                             (score, movie_id))
+
+
+async def set_comment(user_id: int, movie_id: int, comment: str | None) -> None:
+    await db.execute("UPDATE ratings SET comment = ? WHERE user_id = ? AND movie_id = ?",
+                     (comment, user_id, movie_id))
+
+
+async def comment_count(movie_id: int) -> int:
+    return int(await db.fetchval(
+        "SELECT COUNT(*) FROM ratings WHERE movie_id = ? AND comment IS NOT NULL AND comment != ''",
+        (movie_id,), default=0,
+    ))
+
+
+async def comments(movie_id: int, offset: int, limit: int) -> list[Row]:
+    return await db.fetchall(
+        """SELECT r.user_id, r.score, r.comment, r.created_at, u.first_name
+           FROM ratings r LEFT JOIN users u ON u.id = r.user_id
+           WHERE r.movie_id = ? AND r.comment IS NOT NULL AND r.comment != ''
+           ORDER BY r.created_at DESC LIMIT ? OFFSET ?""",
+        (movie_id, limit, offset),
+    )
+
+
 # ---------- saqlanganlar ----------
 
 async def is_saved(user_id: int, movie_id: int) -> bool:
