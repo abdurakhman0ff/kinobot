@@ -75,12 +75,12 @@ def locked_kb() -> InlineKeyboardMarkup:
 # ---------- kino kartochkasi ----------
 
 def film_card_kb(movie: dict[str, Any], bot_username: str, saved: bool, parts: Sequence[dict[str, Any]] | None = None) -> InlineKeyboardMarkup:
-    """Kino kartochkasi: Qismlar (franchise) va asosiy tugmalar."""
+    """Kino kartochkasi: Qismlar va asosiy tugmalar."""
     m = movie["id"]
     rows = []
     
-    # Agar ushbu kinoning boshqa qismlari bo'lsa, qismlar tugmalarini chiqaramiz
-    if parts and len(parts) > 1:
+    # Xatolik chiqmasligi uchun parts ro'yxat ekanligini va uzunligini xavfsiz tekshiramiz
+    if parts and isinstance(parts, (list, tuple)) and len(parts) > 1:
         part_btns = [
             btn(f"{'▶️ ' if p['id'] == m else ''}{p['part_number']}-qism", Card(a="open", m=p["id"]))
             for p in parts
