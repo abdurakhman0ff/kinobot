@@ -4,7 +4,8 @@ from __future__ import annotations
 from typing import Any, Sequence
 from urllib.parse import quote
 
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 import texts as t
 from keyboards.callbacks import Card, Nav, Op, Req, Rnd, SubCheck, Vip
@@ -83,13 +84,13 @@ def film_card_kb(
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
-    # 1. Franshiza qismlari tugmalari (◀️ Oldingi, Keyingi ▶️ yoki 1-qism, 2-qism...)
+    # 1. Franshiza qismlari tugmalari (1-qism, 2-qism...)
     if parts and len(parts) > 1:
         part_buttons = []
         for p in parts:
             p_num = p["part_number"]
             p_id = p["id"]
-            # Hozir ko'rilayotgan qism bo'lsa, ajratib ko'rsatamiz
+            # Hozir ko'rilayotgan qism bo'lsa qizil nuqta, aks holda ▶️ chiqadi
             label = f"▶️ {p_num}-qism" if p_id != current_part_id else f"🔴 {p_num}-qism"
             part_buttons.append(
                 InlineKeyboardButton(
@@ -97,7 +98,6 @@ def film_card_kb(
                     callback_data=Card(a="open", m=movie["id"], v=p_id).pack()
                 )
             )
-        # Qism tugmalarini har bir qatorda 2/3 tadan joylashtiramiz
         builder.row(*part_buttons, width=3)
 
     # 2. Asosiy tugmalar: Baholash va Saqlash
@@ -118,7 +118,7 @@ def film_card_kb(
 
 def serial_card_kb(movie: dict[str, Any], bot_username: str, seasons: Sequence[int], saved: bool,
                     cont: tuple[int, int, int] | None) -> InlineKeyboardMarkup:
-    """Serial kartochkasi: Faqat Baholash | Saqlash va Ulashish tugmalari qoldi."""
+    """Serial kartochkasi: Baholash | Saqlash va Ulashish tugmalari."""
     m = movie["id"]
     rows = chunk([btn(t.BTN_SEASON.format(n=s), Card(a="ss", m=m, v=s, k="s")) for s in seasons], 3)
     if cont:
@@ -126,28 +126,26 @@ def serial_card_kb(movie: dict[str, Any], bot_username: str, seasons: Sequence[i
         rows.append([btn(t.BTN_CONTINUE.format(season=season, number=number), Card(a="se", m=m, v=ep_id, k="s"))])
     
     rows += [
-        # 1-qator: Baholash va Saqlash
         [
             btn(t.BTN_RATE, Card(a="rate", m=m, k="s")),
             btn(t.BTN_UNSAVE if saved else t.BTN_SAVE, Card(a="sv", m=m, k="s"))
         ],
-        # 2-qator: Do'stlarga ulashish (uzun tugma)
         [
             btn(t.BTN_SHARE_SHORT, url=share_url(bot_username, movie))
         ]
     ]
     return kb(rows)
-                        
+
+
 def movie_parts_kb(movie_id: int, parts: Sequence[dict[str, Any]]) -> InlineKeyboardMarkup:
-    """2-rasmdagi kabi ko'p qismli kinoning qismlari tugmalarini yaratadi."""
     buttons = [
         btn(f"▶️ {p['part_number']}-qism", Card(a="open_part", m=movie_id, v=p["id"]))
         for p in parts
     ]
-    # Qismlarni 3 tadan qilib qatorlarga bo'lamiz
     rows = chunk(buttons, 3)
     rows.append([btn(t.BTN_BACK, Nav(to="menu"))])
     return kb(rows)
+
 
 EPISODES_PER_PAGE = 25
 
@@ -268,7 +266,6 @@ def renew_kb() -> InlineKeyboardMarkup:
 
 
 def cancel_payment_kb() -> InlineKeyboardMarkup:
-    """Rekvizitlar chiqqandagi bekor qilish tugmasi."""
     return kb([
         [btn("❌ Bekor qilish", Nav(to="vip"))]
     ])
