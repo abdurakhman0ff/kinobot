@@ -122,7 +122,17 @@ def serial_card_kb(movie: dict[str, Any], bot_username: str, seasons: Sequence[i
         ]
     ]
     return kb(rows)
-
+                        
+def movie_parts_kb(movie_id: int, parts: Sequence[dict[str, Any]]) -> InlineKeyboardMarkup:
+    """2-rasmdagi kabi ko'p qismli kinoning qismlari tugmalarini yaratadi."""
+    buttons = [
+        btn(f"▶️ {p['part_number']}-qism", Card(a="open_part", m=movie_id, v=p["id"]))
+        for p in parts
+    ]
+    # Qismlarni 3 tadan qilib qatorlarga bo'lamiz
+    rows = chunk(buttons, 3)
+    rows.append([btn(t.BTN_BACK, Nav(to="menu"))])
+    return kb(rows)
 
 EPISODES_PER_PAGE = 25
 
