@@ -74,31 +74,46 @@ def locked_kb() -> InlineKeyboardMarkup:
 
 # ---------- kino kartochkasi ----------
 
-def film_card_kb(movie: dict[str, Any], bot_username: str, saved: bool, parts: Sequence[dict[str, Any]] | None = None) -> InlineKeyboardMarkup:
-    """Kino kartochkasi: Qismlar va asosiy tugmalar."""
-    m = movie["id"]
-    rows = []
-    
-    # Xatolik chiqmasligi uchun parts ro'yxat ekanligini va uzunligini xavfsiz tekshiramiz
-    if parts and isinstance(parts, (list, tuple)) and len(parts) > 1:
-        part_btns = [
-            btn(f"{'▶️ ' if p['id'] == m else ''}{p['part_number']}-qism", Card(a="open", m=p["id"]))
-            for p in parts
-        ]
-        rows.append(part_btns)  # [ 1-qism ] [ 2-qism ] [ 3-qism ]
-        
-    rows += [
-        # 1-qator: Baholash va Saqlash
-        [
-            btn(t.BTN_RATE, Card(a="rate", m=m)), 
-            btn(t.BTN_UNSAVE if saved else t.BTN_SAVE, Card(a="sv", m=m))
-        ],
-        # 2-qator: Do'stlarga ulashish (uzun tugma)
-        [
-            btn(t.BTN_SHARE, url=share_url(bot_username, movie))
-        ]
-    ]
-    return kb(rows)
+def film_card_kb(
+    movie: dict[str, Any], 
+    bot_username: str, 
+    is_saved: bool = False, 
+    parts: list[dict[str, Any]] | None = None,
+    current_part_id: int | None = None
+) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    # 1. Franshiza qismlari tugmalari (◀️ Oldingi, Keyingi ▶️ yoki 1-qism, 2-qism...)
+    if parts and len(parts) > 1:
+        part_buttons = []
+        for p in parts:
+            p_num = p["part_number"]
+            p_id = p["id"]
+            # Hozir ko'rilayotgan qism bo'lsa, ajratib ko'rsatamiz
+            label = f"▶️ {p_num}-qism" if p_id != current_part_id else f"🔴 {p_num}-qism"
+            part_buttons.append(
+                InlineKeyboardButton(
+                    text=label,
+                    callback_data=Card(a="open", m=movie["id"], v=p_id).pack()
+                )
+            )
+        # Qism tugmalarini har bir qatorda 2/3 tadan joylashtiramiz
+        builder.row(*part_buttons, width=3)
+
+    # 2. Asosiy tugmalar: Baholash va Saqlash
+    saved_text = "⭐️ Saqlangan" if is_saved else "⭐️ Saqlash"
+    builder.row(
+        InlineKeyboardButton(text="⭐ Baholash", callback_data=Card(a="rate", m=movie["id"]).pack()),
+        InlineKeyboardButton(text=saved_text, callback_data=Card(a="sv", m=movie["id"]).pack()),
+    )
+
+    # 3. Ulashish tugmasi
+    share_url = f"https://t.me/share/url?url=https://t.me/{bot_username}?start=m_{movie['code']}"
+    builder.row(
+        InlineKeyboardButton(text="↗️ Do'stlarga ulashish", url=share_url)
+    )
+
+    return builder.as_markup()
 
 
 def serial_card_kb(movie: dict[str, Any], bot_username: str, seasons: Sequence[int], saved: bool,
