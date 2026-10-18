@@ -401,3 +401,26 @@ async def history(user_id: int, limit: int = 20) -> list[Row]:
             WHERE v.user_id = ? GROUP BY m.id ORDER BY last_view DESC LIMIT ?""",
         (user_id, limit),
     )
+
+# ---------- kino qismlari (franshizalar uchun) ----------
+
+async def movie_parts(movie_id: int) -> list[Row]:
+    """Kinoning barcha qismlarini (masalan, 1-qism, 2-qism) qaytaradi."""
+    return await db.fetchall(
+        "SELECT * FROM movie_parts WHERE movie_id = ? ORDER BY part_number ASC", (movie_id,)
+    )
+
+
+async def movie_part_by_id(part_id: int) -> Row | None:
+    """Alohida qism ma'lumotini ID bo'yicha olish."""
+    return await db.fetchone("SELECT * FROM movie_parts WHERE id = ?", (part_id,))
+
+
+async def add_movie_part(movie_id: int, part_number: int, file_id: str, 
+                         storage_message_id: int | None = None, backup_message_id: int | None = None) -> int:
+    """Kinoga yangi qism qo'shadi."""
+    return await db.insert(
+        """INSERT INTO movie_parts (movie_id, part_number, file_id, storage_message_id, backup_message_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (movie_id, part_number, file_id, storage_message_id, backup_message_id, now_db())
+    )
