@@ -176,8 +176,8 @@ async def _seed() -> None:
     await db.execute("UPDATE movies SET type = 'film' WHERE type IS NULL OR type = ''")
 
 async def migrate():
-    # Boshqa migratsiyalar...
-    
+    # Boshqa mavjud migratsiyalar...
+
     # movie_parts jadvalini yaratish
     await db.execute("""
         CREATE TABLE IF NOT EXISTS movie_parts (
