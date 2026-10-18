@@ -175,6 +175,22 @@ async def _seed() -> None:
     # eski kinolar: tur film, tillar bo'sh qoladi ("Noma'lum")
     await db.execute("UPDATE movies SET type = 'film' WHERE type IS NULL OR type = ''")
 
+async def migrate():
+    # Boshqa migratsiyalar...
+    
+    # movie_parts jadvalini yaratish
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS movie_parts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            movie_id INTEGER NOT NULL,
+            part_number INTEGER NOT NULL,
+            file_id TEXT NOT NULL,
+            storage_message_id INTEGER,
+            backup_message_id INTEGER,
+            created_at TEXT,
+            FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE
+        );
+    """)
 
 async def migrate() -> None:
     for table in TABLES:
