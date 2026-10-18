@@ -618,3 +618,5 @@ EXPORT_CAPTION = "📤 Kinolar ro'yxati"
 IMPORT_SEND = "📥 CSV faylni yuboring (export formatida). Kod bo'yicha mavjud kinolar yangilanadi."
 IMPORT_BAD_FILE = "Faqat .csv fayl (10 MB gacha) yuboring."
 IMPORT_DONE = "✅ Import tugadi.\nYangilandi: {updated}\nTopilmadi: {not_found}\nXato qatorlar: {errors}"
+
+NOT_FOUND = "❌ {code} kodli kino topilmadi.\n\nBoshqa kodni sinab ko'ring yoki 📝 Kino so'rash orqali so'rang."
