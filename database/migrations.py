@@ -103,7 +103,7 @@ async def _rebuild(table: str, cols: dict[str, dict]) -> None:
 
 
 async def _fill_aliases(table: str, before: dict[str, dict]) -> None:
-    """Moslashgan jadvalda eski ustundagi qiymatlarni yangi ustunga bir marta ko'chirish."""
+    """Moslashgan jadvalda eski ustumdagi qiymatlarni yangi ustunga bir marta ko'chirish."""
     flag = f"migrated_aliases_{table}"
     if table not in ALIASES or await _flag(flag):
         return
@@ -175,10 +175,13 @@ async def _seed() -> None:
     # eski kinolar: tur film, tillar bo'sh qoladi ("Noma'lum")
     await db.execute("UPDATE movies SET type = 'film' WHERE type IS NULL OR type = ''")
 
-async def migrate():
-    # Boshqa mavjud migratsiyalar...
 
-    # movie_parts jadvalini yaratish
+async def migrate() -> None:
+    # 1. Asosiy jadvallarni tekshirish va yaratish/yangilash
+    for table in TABLES:
+        await _ensure_table(table)
+    
+    # 2. movie_parts jadvalini yaratish (franshiza/qismlar uchun)
     await db.execute("""
         CREATE TABLE IF NOT EXISTS movie_parts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -192,9 +195,6 @@ async def migrate():
         );
     """)
 
-async def migrate() -> None:
-    for table in TABLES:
-        await _ensure_table(table)
     await _ensure_movie_codes()
     for sql in INDEXES:
         await db.execute(sql)
