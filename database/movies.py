@@ -276,3 +276,24 @@ async def add_movie_part(movie_id: int, part_number: int, file_id: str,
 
 async def episode(episode_id: int) -> Row | None:
     return await movie_part_by_id(episode_id)
+    
+# ---------- franshiza va qismlar uchun qo'shimchalar ----------
+
+async def episode(part_id: int) -> Row | None:
+    return await movie_part_by_id(part_id)
+
+async def episodes(movie_id: int, season_or_part: int = 0) -> list[Row]:
+    return await movie_parts(movie_id)
+
+async def neighbor(movie_id: int, part_id: int) -> tuple[int | None, int | None]:
+    parts = await movie_parts(movie_id)
+    if not parts:
+        return None, None
+    ids = [p["id"] for p in parts]
+    try:
+        idx = ids.index(part_id)
+    except ValueError:
+        return None, None
+    prev_id = ids[idx - 1] if idx > 0 else None
+    next_id = ids[idx + 1] if idx < len(ids) - 1 else None
+    return prev_id, next_id
