@@ -160,7 +160,7 @@ async def open_movie(bot: Bot, user: Row, chat_id: int, movie: Row, checked: boo
         await deliver(bot, user, chat_id, movie)
 
 
-async def open_episode(bot: Bot, user: Row, chat_id: int, episode_id: int, checked: bool = False, old_message_id: int | None = None) -> bool:
+async def open_episode(bot: Bot, user: Row, chat_id: int, episode_id: int, checked: bool = False) -> bool:
     ep = await movies.episode(episode_id)
     movie = await movies.get(ep["movie_id"]) if ep else None
     if not ep or not movie:
@@ -168,7 +168,7 @@ async def open_episode(bot: Bot, user: Row, chat_id: int, episode_id: int, check
         return False
     if not checked and not await subscription.ensure(bot, user, chat_id, {"a": "ep", "id": episode_id}):
         return False
-    return await deliver(bot, user, chat_id, movie, ep, old_message_id=old_message_id)
+    return await deliver(bot, user, chat_id, movie, ep)
 
 
 # ---------- yuborish ----------
@@ -215,7 +215,7 @@ async def send_video(bot: Bot, chat_id: int, src: Row, caption: str, kb: InlineK
     return False
 
 
-async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None = None, old_message_id: int | None = None) -> bool:
+async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None = None) -> bool:
     """Obuna tekshiruvidan keyin chaqiriladi: VIP qulf -> limit -> yuborish -> hisob."""
     privileged = users.is_privileged(user)
     if movie["is_vip"] and not privileged:
@@ -238,15 +238,7 @@ async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None 
         else:
             caption, kb, src = card_caption(movie), await film_kb(bot, user["id"], movie), movie
 
-        # 🗑 Agar video xabari ID si bo'lsa (va menyu xabari bo'lmasa), yangisini yuborishdan oldin o'chiramiz
-        if old_message_id:
-            try:
-                await bot.delete_message(chat_id, old_message_id)
-            except Exception:
-                pass
-
-        # 🔒 HAMMA filmlar va seriallar uchun protect=True qilindi
-        if not await send_video(bot, chat_id, src, caption, kb, protect=True):
+        if not await send_video(bot, chat_id, src, caption, kb, protect=bool(movie["is_vip"])):
             await bot.send_message(chat_id, t.VIDEO_UNAVAILABLE)
             where = t.ADMIN_EP_SUFFIX.format(season=ep["season"], number=ep["number"]) if ep else ""
             await notify.owner(

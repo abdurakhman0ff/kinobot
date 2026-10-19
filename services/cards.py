@@ -72,14 +72,10 @@ def locked_caption(movie: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def episode_caption(movie: dict[str, Any], episode: dict[str, Any]) -> str:
-    # season yoki part_number bo'lishiga qarab xavfsiz olamiz
-    part_num = episode.get("part_number") or episode.get("number") or ""
-    title = movie.get("title", "")
-    
-    if part_num:
-        return f"🎬 {title}\n📌 {part_num}-qism\n\n{movie.get('description', '')}"
-    return card_caption(movie)
+def episode_caption(movie: dict[str, Any], ep: dict[str, Any]) -> str:
+    return t.EPISODE_CAPTION.format(
+        title=esc(movie.get("title") or ""), season=ep["season"], number=ep["number"], code=movie["code"]
+    )
 
 
 def short_post(movie: dict[str, Any]) -> str:

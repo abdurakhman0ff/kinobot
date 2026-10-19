@@ -15,6 +15,7 @@ MOVIE_FIELDS = {
     "storage_message_id", "backup_message_id", "file_id", "is_vip", "trailer_url",
 }
 
+# ro'yxatlarda kerak bo'ladigan qisqa ustunlar
 SHORT = "m.id, m.code, m.type, m.title, m.year, m.is_vip, m.views"
 
 
@@ -82,11 +83,7 @@ async def by_ids(ids: list[int]) -> list[Row]:
 # ---------- ro'yxatlar ----------
 
 def _type_cond(kind: str) -> str:
-    if kind == "series":
-        return "m.type = 'serial'"
-    elif kind == "cartoons":
-        return "m.type = 'multfilm'"
-    return "m.type = 'film'"
+    return "m.type = 'serial'" if kind == "series" else "m.type != 'serial'"
 
 
 async def catalog(kind: str, offset: int, limit: int) -> tuple[int, list[Row]]:
@@ -106,19 +103,14 @@ async def newest(limit: int, offset: int = 0) -> list[Row]:
 
 
 async def top(period: str, offset: int, limit: int) -> tuple[int, list[Row]]:
-    """Top kinolar. Har doim 'cnt' ustuni qaytariladi (KeyError oldini olish uchun)."""
+    """period: w (hafta), m (oy), a (hammasi)."""
     if period == "a":
-        # ✅ Barcha vaqt: views ni cnt deb alias qilamiz
         total = int(await db.fetchval("SELECT COUNT(*) FROM movies WHERE views > 0", default=0))
         rows = await db.fetchall(
-            f"""SELECT {SHORT}, m.views AS cnt FROM movies m
-                WHERE m.views > 0
-                ORDER BY m.views DESC, m.id DESC
-                LIMIT ? OFFSET ?""",
+            f"SELECT {SHORT} FROM movies m WHERE m.views > 0 ORDER BY m.views DESC, m.id DESC LIMIT ? OFFSET ?",
             (limit, offset),
         )
         return total, rows
-
     since = ago_db(days=7 if period == "w" else 30)
     total = int(await db.fetchval(
         "SELECT COUNT(DISTINCT movie_id) FROM views WHERE created_at >= ?", (since,), default=0
@@ -129,6 +121,14 @@ async def top(period: str, offset: int, limit: int) -> tuple[int, list[Row]]:
         (since, limit, offset),
     )
     return total, rows
+
+
+async def top_since(since: str, limit: int) -> list[Row]:
+    return await db.fetchall(
+        """SELECT m.code, m.title, COUNT(v.id) AS cnt FROM views v JOIN movies m ON m.id = v.movie_id
+           WHERE v.created_at >= ? GROUP BY m.id ORDER BY cnt DESC LIMIT ?""",
+        (since, limit),
+    )
 
 
 async def random_one(exclude_id: int = 0) -> Row | None:
@@ -183,6 +183,125 @@ async def filter_page(type_code: str, language: str | None, year_idx: int, offse
     )
 
 
+# ---------- o'xshash va TMDB ----------
+
+async def similar(movie: Row, limit: int = 5) -> list[Row]:
+    genres = set(split_csv(movie.get("genres")))
+    if not genres:
+        return []
+    rows = await db.fetchall(
+        "SELECT * FROM movies WHERE type = ? AND id != ? AND genres IS NOT NULL AND genres != ''",
+        (movie["type"], movie["id"]),
+    )
+    scored = []
+    for r in rows:
+        common = len(genres & set(split_csv(r["genres"])))
+        if common:
+            scored.append((common, rating_of(r) or 0, r["views"], r))
+    scored.sort(key=lambda x: (x[0], x[1], x[2]), reverse=True)
+    return [x[3] for x in scored[:limit]]
+
+
+async def by_tmdb(tmdb_ids: list[int], series: bool) -> list[Row]:
+    if not tmdb_ids:
+        return []
+    marks = ",".join("?" for _ in tmdb_ids)
+    cond = "type = 'serial'" if series else "type != 'serial'"
+    return await db.fetchall(
+        f"SELECT * FROM movies WHERE {cond} AND tmdb_id IN ({marks}) ORDER BY views DESC", tmdb_ids
+    )
+
+
+async def missing_tmdb() -> list[Row]:
+    return await db.fetchall("SELECT * FROM movies WHERE tmdb_id IS NULL ORDER BY id")
+
+
+async def unfilled_next(after_id: int) -> Row | None:
+    return await db.fetchone(
+        """SELECT * FROM movies WHERE id > ? AND (type IS NULL OR type = ''
+           OR languages IS NULL OR languages = '') ORDER BY id LIMIT 1""",
+        (after_id,),
+    )
+
+
+async def unfilled_count() -> int:
+    return int(await db.fetchval(
+        "SELECT COUNT(*) FROM movies WHERE type IS NULL OR type = '' OR languages IS NULL OR languages = ''",
+        default=0,
+    ))
+
+
+async def export_rows() -> list[Row]:
+    return await db.fetchall(
+        "SELECT code, title, type, year, languages, is_vip, views, description FROM movies ORDER BY code"
+    )
+
+
+# ---------- qismlar ----------
+
+async def episode(episode_id: int) -> Row | None:
+    return await db.fetchone("SELECT * FROM episodes WHERE id = ?", (episode_id,))
+
+
+async def episode_by_number(movie_id: int, season: int, number: int) -> Row | None:
+    return await db.fetchone(
+        "SELECT * FROM episodes WHERE movie_id = ? AND season = ? AND number = ?", (movie_id, season, number)
+    )
+
+
+async def seasons(movie_id: int) -> list[int]:
+    rows = await db.fetchall(
+        "SELECT DISTINCT season FROM episodes WHERE movie_id = ? ORDER BY season", (movie_id,)
+    )
+    return [r["season"] for r in rows]
+
+
+async def episodes(movie_id: int, season: int) -> list[Row]:
+    return await db.fetchall(
+        "SELECT id, season, number FROM episodes WHERE movie_id = ? AND season = ? ORDER BY number",
+        (movie_id, season),
+    )
+
+
+async def episode_count(movie_id: int) -> int:
+    return int(await db.fetchval("SELECT COUNT(*) FROM episodes WHERE movie_id = ?", (movie_id,), default=0))
+
+
+async def neighbor(ep: Row, direction: int) -> Row | None:
+    if direction > 0:
+        return await db.fetchone(
+            """SELECT * FROM episodes WHERE movie_id = ? AND (season > ? OR (season = ? AND number > ?))
+               ORDER BY season, number LIMIT 1""",
+            (ep["movie_id"], ep["season"], ep["season"], ep["number"]),
+        )
+    return await db.fetchone(
+        """SELECT * FROM episodes WHERE movie_id = ? AND (season < ? OR (season = ? AND number < ?))
+           ORDER BY season DESC, number DESC LIMIT 1""",
+        (ep["movie_id"], ep["season"], ep["season"], ep["number"]),
+    )
+
+
+async def save_episode(movie_id: int, season: int, number: int, storage_id: int | None,
+                       backup_id: int | None, file_id: str | None) -> bool:
+    """Qism qo'shadi yoki almashtiradi. Almashtirilgan bo'lsa True."""
+    existed = await episode_by_number(movie_id, season, number)
+    await db.execute(
+        """INSERT INTO episodes (movie_id, season, number, storage_message_id, backup_message_id, file_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT (movie_id, season, number) DO UPDATE SET
+             storage_message_id = excluded.storage_message_id,
+             backup_message_id = excluded.backup_message_id,
+             file_id = excluded.file_id""",
+        (movie_id, season, number, storage_id, backup_id, file_id, now_db()),
+    )
+    await db.execute("UPDATE movies SET updated_at = ? WHERE id = ?", (now_db(), movie_id))
+    return existed is not None
+
+
+async def delete_episode(episode_id: int) -> None:
+    await db.execute("DELETE FROM episodes WHERE id = ?", (episode_id,))
+
+
 # ---------- reyting va izohlar ----------
 
 async def user_rating(user_id: int, movie_id: int) -> Row | None:
@@ -233,6 +352,7 @@ async def is_saved(user_id: int, movie_id: int) -> bool:
 
 
 async def toggle_saved(user_id: int, movie_id: int) -> bool:
+    """Yangi holat: True = saqlangan."""
     if await is_saved(user_id, movie_id):
         await db.execute("DELETE FROM saved WHERE user_id = ? AND movie_id = ?", (user_id, movie_id))
         return False
@@ -251,58 +371,33 @@ async def saved_page(user_id: int, offset: int, limit: int) -> tuple[int, list[R
     return total, rows
 
 
-# ---------- ko'rishlar ----------
+# ---------- ko'rishlar va progress ----------
 
 async def record_view(user_id: int, movie_id: int, episode_id: int | None) -> None:
     async with db.tx():
         await db.execute("INSERT INTO views (user_id, movie_id, episode_id, created_at) VALUES (?, ?, ?, ?)",
                          (user_id, movie_id, episode_id, now_db()))
         await db.execute("UPDATE movies SET views = views + 1 WHERE id = ?", (movie_id,))
+        if episode_id:
+            await db.execute("UPDATE episodes SET views = views + 1 WHERE id = ?", (episode_id,))
 
 
-# ---------- kino qismlari (franshizalar uchun) ----------
+async def set_progress(user_id: int, movie_id: int, season: int, number: int) -> None:
+    await db.execute(
+        """INSERT INTO watch_progress (user_id, movie_id, season, episode, updated_at) VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT (user_id, movie_id) DO UPDATE SET season = excluded.season,
+             episode = excluded.episode, updated_at = excluded.updated_at""",
+        (user_id, movie_id, season, number, now_db()),
+    )
 
-async def movie_parts(movie_id: int) -> list[Row]:
+
+async def progress(user_id: int, movie_id: int) -> Row | None:
+    return await db.fetchone("SELECT * FROM watch_progress WHERE user_id = ? AND movie_id = ?", (user_id, movie_id))
+
+
+async def history(user_id: int, limit: int = 20) -> list[Row]:
     return await db.fetchall(
-        "SELECT * FROM movie_parts WHERE movie_id = ? ORDER BY part_number ASC", (movie_id,)
+        f"""SELECT {SHORT}, MAX(v.created_at) AS last_view FROM views v JOIN movies m ON m.id = v.movie_id
+            WHERE v.user_id = ? GROUP BY m.id ORDER BY last_view DESC LIMIT ?""",
+        (user_id, limit),
     )
-
-
-async def movie_part_by_id(part_id: int) -> Row | None:
-    return await db.fetchone("SELECT * FROM movie_parts WHERE id = ?", (part_id,))
-
-
-async def add_movie_part(movie_id: int, part_number: int, file_id: str,
-                         storage_message_id: int | None = None, backup_message_id: int | None = None) -> int:
-    return await db.insert(
-        """INSERT INTO movie_parts (movie_id, part_number, file_id, storage_message_id, backup_message_id, created_at)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (movie_id, part_number, file_id, storage_message_id, backup_message_id, now_db())
-    )
-
-
-async def episode(part_id: int) -> Row | None:
-    """Bitta qismni ID bo'yicha olish."""
-    return await movie_part_by_id(part_id)
-
-
-async def episodes(movie_id: int, season_or_part: int = 0) -> list[Row]:
-    return await movie_parts(movie_id)
-
-
-async def neighbor(movie_id: int, part_id: int) -> tuple[int | None, int | None]:
-    parts = await movie_parts(movie_id)
-    if not parts:
-        return None, None
-    ids = [p["id"] for p in parts]
-    try:
-        idx = ids.index(part_id)
-    except ValueError:
-        return None, None
-    prev_id = ids[idx - 1] if idx > 0 else None
-    next_id = ids[idx + 1] if idx < len(ids) - 1 else None
-    return prev_id, next_id
-
-
-async def top_since(since_date: str = "", limit: int = 10) -> list[Row]:
-    return await db.fetchall("SELECT * FROM movies ORDER BY id DESC LIMIT ?", (limit,))

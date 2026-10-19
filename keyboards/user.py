@@ -4,8 +4,7 @@ from __future__ import annotations
 from typing import Any, Sequence
 from urllib.parse import quote
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardMarkup
 
 import texts as t
 from keyboards.callbacks import Card, Nav, Op, Req, Rnd, SubCheck, Vip
@@ -28,21 +27,18 @@ def start_kb() -> InlineKeyboardMarkup:
 
 
 def main_menu(vip_days: int | None, is_staff: bool) -> InlineKeyboardMarkup:
-    """Asosiy menyu: IMDb qidiruv olib tashlandi, Profil eng pastga o'tkazildi."""
     vip_btn = btn(t.BTN_VIP_LEFT.format(days=vip_days) if vip_days is not None else t.BTN_VIP, Nav(to="vip"))
     rows = [
         [vip_btn, btn(t.BTN_TOP, Nav(to="top"))],
         [btn(t.BTN_FILMS, Nav(to="films")), btn(t.BTN_SERIES, Nav(to="series"))],
         [btn(t.BTN_NEW, Nav(to="new")), btn(t.BTN_RANDOM, Nav(to="random"))],
         [btn(t.BTN_FILTER, Nav(to="filter")), btn(t.BTN_SAVED, Nav(to="saved"))],
+        [btn(t.BTN_IMDB, Nav(to="imdb")), btn(t.BTN_PROFILE, Nav(to="profile"))],
         [btn(t.BTN_REQUEST, Nav(to="req")), btn(t.BTN_PROMO, Nav(to="promo"))],
         [btn(t.BTN_HELP, Nav(to="help")), btn(t.BTN_SEARCH, inline="")],
     ]
     if is_staff:
         rows.append([btn(t.BTN_ADMIN, Nav(to="admin"))])
-        
-    # 👤 Profil eng pastda uzun tugma bo'lib joylashadi
-    rows.append([btn(t.BTN_PROFILE, Nav(to="profile"))])
     return kb(rows)
 
 
@@ -75,75 +71,39 @@ def locked_kb() -> InlineKeyboardMarkup:
 
 # ---------- kino kartochkasi ----------
 
-def film_card_kb(
-    movie: dict[str, Any], 
-    bot_username: str, 
-    is_saved: bool = False, 
-    parts: list[dict[str, Any]] | None = None,
-    current_part_id: int | None = None
-) -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-
-    # 1. Franshiza qismlari tugmalari (1-qism, 2-qism...)
-    if parts and len(parts) > 1:
-        part_buttons = []
-        for p in parts:
-            p_num = p["part_number"]
-            p_id = p["id"]
-            # Hozir ko'rilayotgan qism bo'lsa qizil nuqta, aks holda ▶️ chiqadi
-            label = f"▶️ {p_num}-qism" if p_id != current_part_id else f"🔴 {p_num}-qism"
-            part_buttons.append(
-                InlineKeyboardButton(
-                    text=label,
-                    callback_data=Card(a="open", m=movie["id"], v=p_id).pack()
-                )
-            )
-        builder.row(*part_buttons, width=3)
-
-    # 2. Asosiy tugmalar: Baholash va Saqlash
-    saved_text = "⭐️ Saqlangan" if is_saved else "⭐️ Saqlash"
-    builder.row(
-        InlineKeyboardButton(text="⭐ Baholash", callback_data=Card(a="rate", m=movie["id"]).pack()),
-        InlineKeyboardButton(text=saved_text, callback_data=Card(a="sv", m=movie["id"]).pack()),
+def film_card_kb(movie: dict[str, Any], bot_username: str, saved: bool, comments: int) -> InlineKeyboardMarkup:
+    m = movie["id"]
+    trailer = (
+        btn(t.BTN_TRAILER, url=movie["trailer_url"]) if movie.get("trailer_url")
+        else btn(t.BTN_TRAILER, Card(a="tr", m=m))
     )
-
-    # 3. Ulashish tugmasi
-    share_url = f"https://t.me/share/url?url=https://t.me/{bot_username}?start=m_{movie['code']}"
-    builder.row(
-        InlineKeyboardButton(text="↗️ Do'stlarga ulashish", url=share_url)
-    )
-
-    return builder.as_markup()
+    return kb([
+        [btn(t.BTN_RATE, Card(a="rate", m=m)), btn(t.BTN_SHARE, url=share_url(bot_username, movie))],
+        [btn(t.BTN_ACTORS, Card(a="act", m=m)), trailer],
+        [btn(t.BTN_SIMILAR, Card(a="sim", m=m)), btn(t.BTN_COMMENTS.format(n=comments), Card(a="cm", m=m))],
+        [btn(t.BTN_UNSAVE if saved else t.BTN_SAVE, Card(a="sv", m=m))],
+        [btn(t.BTN_REPORT, Card(a="rep", m=m))],
+    ])
 
 
 def serial_card_kb(movie: dict[str, Any], bot_username: str, seasons: Sequence[int], saved: bool,
-                    cont: tuple[int, int, int] | None) -> InlineKeyboardMarkup:
-    """Serial kartochkasi: Baholash | Saqlash va Ulashish tugmalari."""
+                   cont: tuple[int, int, int] | None) -> InlineKeyboardMarkup:
     m = movie["id"]
     rows = chunk([btn(t.BTN_SEASON.format(n=s), Card(a="ss", m=m, v=s, k="s")) for s in seasons], 3)
     if cont:
         ep_id, season, number = cont
         rows.append([btn(t.BTN_CONTINUE.format(season=season, number=number), Card(a="se", m=m, v=ep_id, k="s"))])
-    
+    trailer = (
+        btn(t.BTN_TRAILER, url=movie["trailer_url"]) if movie.get("trailer_url")
+        else btn(t.BTN_TRAILER, Card(a="tr", m=m, k="s"))
+    )
     rows += [
-        [
-            btn(t.BTN_RATE, Card(a="rate", m=m, k="s")),
-            btn(t.BTN_UNSAVE if saved else t.BTN_SAVE, Card(a="sv", m=m, k="s"))
-        ],
-        [
-            btn(t.BTN_SHARE_SHORT, url=share_url(bot_username, movie))
-        ]
+        [btn(t.BTN_RATE, Card(a="rate", m=m, k="s")),
+         btn(t.BTN_UNSAVE if saved else t.BTN_SAVE, Card(a="sv", m=m, k="s"))],
+        [btn(t.BTN_SHARE_SHORT, url=share_url(bot_username, movie))],
+        [btn(t.BTN_ACTORS, Card(a="act", m=m, k="s")), trailer],
+        [btn(t.BTN_REPORT, Card(a="rep", m=m, k="s"))],
     ]
-    return kb(rows)
-
-
-def movie_parts_kb(movie_id: int, parts: Sequence[dict[str, Any]]) -> InlineKeyboardMarkup:
-    buttons = [
-        btn(f"▶️ {p['part_number']}-qism", Card(a="open_part", m=movie_id, v=p["id"]))
-        for p in parts
-    ]
-    rows = chunk(buttons, 3)
-    rows.append([btn(t.BTN_BACK, Nav(to="menu"))])
     return kb(rows)
 
 
@@ -256,16 +216,10 @@ def pay_methods_kb(tariff: dict[str, Any], click_enabled: bool) -> InlineKeyboar
     if tariff.get("price_stars"):
         rows.append([btn(t.BTN_PAY_STARS.format(stars=tariff["price_stars"]), Vip(a="stars", t=tariff["id"]))])
     if click_enabled and tariff.get("price_uzs"):
-        rows.append([btn(f"💳 Karta orqali — {som(tariff['price_uzs'])}", Vip(a="click", t=tariff["id"]))])
+        rows.append([btn(t.BTN_PAY_CLICK.format(price=som(tariff["price_uzs"])), Vip(a="click", t=tariff["id"]))])
     rows.append(nav_row(Nav(to="vip")))
     return kb(rows)
 
 
 def renew_kb() -> InlineKeyboardMarkup:
     return kb([[btn(t.BTN_RENEW, Nav(to="vip"))]])
-
-
-def cancel_payment_kb() -> InlineKeyboardMarkup:
-    return kb([
-        [btn("❌ Bekor qilish", Nav(to="vip"))]
-    ])

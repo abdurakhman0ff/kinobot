@@ -2,7 +2,6 @@
 from aiogram import Router
 
 from handlers import (
-    cards,  # <-- 1. cards modulini qo'shamiz
     delivery,
     filter,
     help,
@@ -25,7 +24,6 @@ from handlers.admin import build_router as build_admin_router
 def build_router() -> Router:
     root = Router(name="root")
     root.include_routers(
-        cards.router,  # <-- 2. cards.router ni birinchilardan qilib ulaymiz
         payments.router,
         start.router,
         build_admin_router(),
@@ -44,3 +42,4 @@ def build_router() -> Router:
         search.router,  # oxirida: holatsiz matn = kod yoki qidiruv
     )
     return root
+

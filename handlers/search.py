@@ -26,11 +26,9 @@ class ImdbForm(StatesGroup):
 
 @router.callback_query(Nav.filter(F.to == "imdb"))
 async def imdb_start(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
-    # ⚡ Darhol javob berish
-    await answer(callback)
-    
     await state.set_state(ImdbForm.query)
     await render(bot, callback.from_user.id, callback.message, t.IMDB_PROMPT, back_kb())
+    await answer(callback)
 
 
 @router.message(ImdbForm.query, F.text)
@@ -43,14 +41,12 @@ async def imdb_query(message: Message, state: FSMContext, bot: Bot, db_user: Row
 
 @router.callback_query(Pg.filter(F.k == "s"))
 async def search_page(callback: CallbackQuery, callback_data: Pg, bot: Bot, db_user: Row) -> None:
-    # ⚡ Darhol javob berish (tugma qotib qolmasligi uchun)
-    await answer(callback)
-    
     query = actions.last_query.get(db_user["id"])
     if not query:
         await answer(callback, t.SEARCH_EXPIRED, alert=True)
         return
     await actions.show_search(bot, db_user, callback.from_user.id, query, callback_data.p, callback.message)
+    await answer(callback)
 
 
 @router.message(StateFilter(None), F.text, ~F.text.startswith("/"))

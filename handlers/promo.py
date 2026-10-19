@@ -26,10 +26,9 @@ class PromoForm(StatesGroup):
 
 @router.callback_query(Nav.filter(F.to == "promo"))
 async def promo_start(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
-    # ⚡ DARHOL JAVOB BERISH
-    await answer(callback)
     await state.set_state(PromoForm.code)
     await render(bot, callback.from_user.id, callback.message, t.PROMO_PROMPT, back_kb())
+    await answer(callback)
 
 
 @router.message(PromoForm.code, F.text)
