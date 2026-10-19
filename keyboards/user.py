@@ -33,12 +33,12 @@ def main_menu(vip_days: int | None, is_staff: bool) -> InlineKeyboardMarkup:
         [btn(t.BTN_FILMS, Nav(to="films")), btn(t.BTN_SERIES, Nav(to="series"))],
         [btn(t.BTN_NEW, Nav(to="new")), btn(t.BTN_RANDOM, Nav(to="random"))],
         [btn(t.BTN_FILTER, Nav(to="filter")), btn(t.BTN_SAVED, Nav(to="saved"))],
-        [btn(t.BTN_IMDB, Nav(to="imdb")), btn(t.BTN_PROFILE, Nav(to="profile"))],
         [btn(t.BTN_REQUEST, Nav(to="req")), btn(t.BTN_PROMO, Nav(to="promo"))],
         [btn(t.BTN_HELP, Nav(to="help")), btn(t.BTN_SEARCH, inline="")],
     ]
     if is_staff:
         rows.append([btn(t.BTN_ADMIN, Nav(to="admin"))])
+    rows.append([btn(t.BTN_PROFILE, Nav(to="profile"))])
     return kb(rows)
 
 
