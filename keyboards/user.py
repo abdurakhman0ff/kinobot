@@ -73,16 +73,12 @@ def locked_kb() -> InlineKeyboardMarkup:
 
 def film_card_kb(movie: dict[str, Any], bot_username: str, saved: bool, comments: int) -> InlineKeyboardMarkup:
     m = movie["id"]
-    trailer = (
-        btn(t.BTN_TRAILER, url=movie["trailer_url"]) if movie.get("trailer_url")
-        else btn(t.BTN_TRAILER, Card(a="tr", m=m))
-    )
     return kb([
-        [btn(t.BTN_RATE, Card(a="rate", m=m)), btn(t.BTN_SHARE, url=share_url(bot_username, movie))],
-        [btn(t.BTN_ACTORS, Card(a="act", m=m)), trailer],
-        [btn(t.BTN_SIMILAR, Card(a="sim", m=m)), btn(t.BTN_COMMENTS.format(n=comments), Card(a="cm", m=m))],
-        [btn(t.BTN_UNSAVE if saved else t.BTN_SAVE, Card(a="sv", m=m))],
-        [btn(t.BTN_REPORT, Card(a="rep", m=m))],
+        [btn(t.BTN_RATE, Card(a="rate", m=m)),
+         btn(t.BTN_UNSAVE if saved else t.BTN_SAVE, Card(a="sv", m=m))],
+        [btn(t.BTN_COMMENTS.format(n=comments), Card(a="cm", m=m)),
+         btn(t.BTN_REPORT, Card(a="rep", m=m))],
+        [btn(t.BTN_SHARE, url=share_url(bot_username, movie))],
     ])
 
 
