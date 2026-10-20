@@ -70,7 +70,12 @@ async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db
 
     elif data.a == "se":
         await answer(callback)
-        await delivery.open_episode(bot, db_user, uid, data.v)
+        opened = await delivery.open_episode(bot, db_user, uid, data.v)
+        if opened and callback.message:
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
 
     elif data.a == "ss":
         eps = await movies.episodes(movie["id"], data.v)
