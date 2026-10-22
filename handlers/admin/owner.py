@@ -30,6 +30,8 @@ SETTING_KEYS = {
     "public_channel_url": t.SET_CHANNEL_URL,
     "public_channel_id": t.SET_CHANNEL_ID,
     "backup_channel_id": t.SET_BACKUP_ID,
+    "card_number": t.SET_CARD,
+    "card_owner": t.SET_CARD_OWNER,
 }
 TARIFF_FIELDS = {"days": t.TAR_DAYS, "price_uzs": t.TAR_UZS, "price_stars": t.TAR_STARS}
 

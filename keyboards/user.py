@@ -211,8 +211,8 @@ def pay_methods_kb(tariff: dict[str, Any], click_enabled: bool) -> InlineKeyboar
     rows = []
     if tariff.get("price_stars"):
         rows.append([btn(t.BTN_PAY_STARS.format(stars=tariff["price_stars"]), Vip(a="stars", t=tariff["id"]))])
-    if click_enabled and tariff.get("price_uzs"):
-        rows.append([btn(t.BTN_PAY_CLICK.format(price=som(tariff["price_uzs"])), Vip(a="click", t=tariff["id"]))])
+    if tariff.get("price_uzs"):
+        rows.append([btn(t.BTN_PAY_CARD.format(price=som(tariff["price_uzs"])), Vip(a="card", t=tariff["id"]))])
     rows.append(nav_row(Nav(to="vip")))
     return kb(rows)
 

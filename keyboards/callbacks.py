@@ -67,3 +67,9 @@ class Adm(CallbackData, prefix="ad"):
     a: str
     id: int = 0
     v: str | None = None
+
+
+class Pay(CallbackData, prefix="py"):
+    """Qo'lda (karta) to'lov: a = ok / no (admin), x = bekor (foydalanuvchi)."""
+    a: str
+    id: int = 0

@@ -635,3 +635,26 @@ VIP_ASK_DAYS = ("👤 {name}\n💎 Hozirgi holat: {status}\n\n"
 VIP_BAD_DAYS = "Iltimos, 0 dan farqli butun son kiriting (masalan: 7 yoki -3)."
 VIP_DONE = "✅ {name} uchun VIP yangilandi.\n⏳ Yangi muddat: {date}"
 VIP_GIVEN_USER = "🎁 Sizga {days} kunlik 💎 VIP berildi!\nMuddat: {date} gacha."
+
+
+# ---------- karta orqali qo'lda to'lov ----------
+BTN_PAY_CARD = "💳 Karta orqali — {price}"
+SET_CARD = "💳 Karta raqami"
+SET_CARD_OWNER = "👤 Karta egasi"
+CARD_OFF = "Karta orqali to'lov hozir sozlanmagan. Keyinroq urinib ko'ring."
+CARD_INFO = ("💳 <b>Karta orqali to'lash</b>\n\n💎 {days} kunlik VIP — <b>{price}</b>\n\n"
+             "Karta: <code>{card}</code>\nEgasi: {owner}\n\n"
+             "Summani o'tkazing va <b>chek rasmini</b> (skrinshot) shu chatga yuboring. "
+             "Admin tekshirgach VIP faollashadi.")
+CARD_CANCELLED = "❌ To'lov bekor qilindi."
+CARD_SENT = "✅ Chekingiz adminga yuborildi. Tekshirilgach VIP faollashtiriladi."
+CARD_NEED_PHOTO = "Iltimos, chek <b>rasmini</b> yuboring (skrinshot)."
+CARD_TOO_MANY = "Sizda tekshiruvni kutayotgan to'lovlar bor. Natijani kuting."
+CARD_ADMIN_CAPTION = ("📥 <b>Yangi to'lov cheki (karta)</b>\n\n👤 {name} · <code>{user_id}</code>\n"
+                      "💎 {days} kun · {amount}\n🧾 #{pid}")
+CARD_BTN_OK = "✅ Tasdiqlash"
+CARD_BTN_NO = "❌ Rad etish"
+CARD_ADMIN_OK = "✅ Tasdiqlandi ({admin})"
+CARD_ADMIN_NO = "❌ Rad etildi ({admin})"
+CARD_ALREADY = "Bu to'lov allaqachon ko'rib chiqilgan."
+CARD_REJECTED_USER = "❌ Yuborgan chekingiz tasdiqlanmadi. Savol bo'lsa, qo'llab-quvvatlashga yozing."

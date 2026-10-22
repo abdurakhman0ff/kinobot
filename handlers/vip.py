@@ -68,7 +68,7 @@ async def choose_tariff(callback: CallbackQuery, callback_data: Vip, bot: Bot) -
     await answer(callback)
 
 
-@router.callback_query(Vip.filter(F.a.in_({"stars", "click"})))
+@router.callback_query(Vip.filter(F.a.in_({"stars"})))
 async def send_invoice(callback: CallbackQuery, callback_data: Vip, bot: Bot) -> None:
     tariff = await payments.tariff(callback_data.t)
     if not tariff or not tariff["is_active"]:
