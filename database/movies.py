@@ -302,6 +302,13 @@ async def delete_episode(episode_id: int) -> None:
     await db.execute("DELETE FROM episodes WHERE id = ?", (episode_id,))
 
 
+async def parts(movie_id: int) -> list[Row]:
+    """Ko'p qismli film: 2, 3, ... qismlar (episodes jadvalida season = 0)."""
+    return await db.fetchall(
+        "SELECT id, number FROM episodes WHERE movie_id = ? AND season = 0 ORDER BY number", (movie_id,)
+    )
+
+
 # ---------- reyting va izohlar ----------
 
 async def user_rating(user_id: int, movie_id: int) -> Row | None:

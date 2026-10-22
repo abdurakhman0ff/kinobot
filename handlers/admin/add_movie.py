@@ -512,7 +512,8 @@ async def finish(bot: Bot, chat_id: int, state: FSMContext, movie: Row) -> None:
         return
     await state.clear()
     await bot.send_message(chat_id, t.ADD_DONE.format(code=movie["code"]),
-                           reply_markup=back_panel_kb([btn(t.BTN_ADD_MORE, Adm(a="add"))]))
+                           reply_markup=back_panel_kb([btn(t.MP_ADD, Adm(a="mp_add", id=movie["id"]))],
+                                                      [btn(t.BTN_ADD_MORE, Adm(a="add"))]))
 
 
 @router.callback_query(Adm.filter(F.a == "pt"), StateFilter("*"))

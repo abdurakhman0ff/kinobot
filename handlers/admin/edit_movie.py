@@ -82,7 +82,7 @@ def movie_admin_kb(movie: Row) -> InlineKeyboardMarkup:
     if movie["type"] == "serial":
         rows.append([btn(t.BTN_EPISODES_ADMIN, Adm(a="eser", id=m))])
     else:
-        rows.append([btn(t.BTN_NEW_POST, Adm(a="efi", id=m))])
+        rows.append([btn(t.BTN_NEW_POST, Adm(a="efi", id=m)), btn(t.MP_BTN, Adm(a="mp_list", id=m))])
     rows.append([btn(t.BTN_DELETE, Adm(a="edl", id=m))])
     rows.append([btn(t.BTN_BACK, Adm(a="edit")), btn(t.BTN_ADMIN_PANEL, Adm(a="p"))])
     return kb(rows)

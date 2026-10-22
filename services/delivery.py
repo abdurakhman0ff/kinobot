@@ -54,12 +54,14 @@ async def bot_username(bot: Bot) -> str:
 
 # ---------- kartochka klaviaturalari ----------
 
-async def film_kb(bot: Bot, user_id: int, movie: Row) -> InlineKeyboardMarkup:
+async def film_kb(bot: Bot, user_id: int, movie: Row, current: int = 0) -> InlineKeyboardMarkup:
     return film_card_kb(
         movie,
         await bot_username(bot),
         await movies.is_saved(user_id, movie["id"]),
         await movies.comment_count(movie["id"]),
+        await movies.parts(movie["id"]),
+        current,
     )
 
 
@@ -151,13 +153,13 @@ async def open_by_code(bot: Bot, user: Row, chat_id: int, code: int, checked: bo
     await open_movie(bot, user, chat_id, movie, checked=True)
 
 
-async def open_movie(bot: Bot, user: Row, chat_id: int, movie: Row, checked: bool = False) -> None:
+async def open_movie(bot: Bot, user: Row, chat_id: int, movie: Row, checked: bool = False) -> bool:
     if not checked and not await subscription.ensure(bot, user, chat_id, {"a": "open", "id": movie["id"]}):
-        return
+        return False
     if movie["type"] == "serial":
         await send_serial_card(bot, user, chat_id, movie)
-    else:
-        await deliver(bot, user, chat_id, movie)
+        return True
+    return await deliver(bot, user, chat_id, movie)
 
 
 async def open_episode(bot: Bot, user: Row, chat_id: int, episode_id: int, checked: bool = False) -> bool:
@@ -222,7 +224,8 @@ async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None 
         await send_locked_card(bot, chat_id, movie)
         return False
 
-    kind = "series" if ep else "movie"
+    is_part = bool(ep and ep["season"] == 0)  # ko'p qismli film qismi (serial qismi emas)
+    kind = "series" if ep and not is_part else "movie"
     item_key = f"e{ep['id']}" if ep else f"m{movie['id']}"
     async with _lock_for(user["id"]):
         if not privileged:
@@ -233,12 +236,17 @@ async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None 
                 await users.add_event(user["id"], "limit_hit", {"kind": kind})
                 return False
 
-        if ep:
+        if is_part:
+            caption = card_caption(movie, t.MP_LABEL.format(n=ep["number"]))
+            kb, src = await film_kb(bot, user["id"], movie, ep["id"]), ep
+        elif ep:
             caption, kb, src = episode_caption(movie, ep), await episode_nav_kb(movie["id"], ep), ep
         else:
-            caption, kb, src = card_caption(movie), await film_kb(bot, user["id"], movie), movie
+            has_parts = bool(await movies.parts(movie["id"]))
+            caption = card_caption(movie, t.MP_LABEL.format(n=1) if has_parts else "")
+            kb, src = await film_kb(bot, user["id"], movie), movie
 
-        if not await send_video(bot, chat_id, src, caption, kb, protect=bool(movie["is_vip"])):
+        if not await send_video(bot, chat_id, src, caption, kb, protect=True):
             await bot.send_message(chat_id, t.VIDEO_UNAVAILABLE)
             where = t.ADMIN_EP_SUFFIX.format(season=ep["season"], number=ep["number"]) if ep else ""
             await notify.owner(
@@ -250,7 +258,7 @@ async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None 
             return False
 
         await movies.record_view(user["id"], movie["id"], ep["id"] if ep else None)
-        if ep:
+        if ep and not is_part:
             await movies.set_progress(user["id"], movie["id"], ep["season"], ep["number"])
         if not privileged:
             await limits.consume(user["id"], kind, item_key)

@@ -181,11 +181,15 @@ async def _flush_later(bot: Bot, uid: int, state: FSMContext) -> None:
         if not stored:
             continue
         replaced = await movies.save_episode(movie_id, season, number, *stored)
-        lines.append((t.EP_REPLACED if replaced else t.EP_ADDED).format(season=season, n=number))
+        if season == 0:
+            lines.append((t.MP_REPLACED if replaced else t.MP_ADDED).format(n=number))
+        else:
+            lines.append((t.EP_REPLACED if replaced else t.EP_ADDED).format(season=season, n=number))
         number += 1
     await state.update_data(next_number=number)
     try:
-        await bot.send_message(uid, "\n".join(lines) + "\n\n" + t.EP_NEXT.format(n=number), reply_markup=done_kb())
+        nxt_text = (t.MP_NEXT if season == 0 else t.EP_NEXT).format(n=number)
+        await bot.send_message(uid, "\n".join(lines) + "\n\n" + nxt_text, reply_markup=done_kb())
     except TelegramAPIError:
         pass
 
@@ -196,7 +200,10 @@ async def eps_done(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None
     await state.clear()
     movie = await movies.get(int(data.get("movie_id", 0))) if data.get("movie_id") else None
     count = await movies.episode_count(movie["id"]) if movie else 0
-    text = t.EP_DONE.format(title=esc(movie["title"]), count=count) if movie else t.CANCELLED
+    if movie and data.get("season") == 0:
+        text = t.MP_DONE.format(title=esc(movie["title"]), count=count + 1)
+    else:
+        text = t.EP_DONE.format(title=esc(movie["title"]), count=count) if movie else t.CANCELLED
     await render(bot, callback.from_user.id, callback.message, text,
                  back_panel_kb([btn(t.BTN_ADD_MORE, Adm(a="add"))]))
     await answer(callback)
@@ -291,3 +298,13 @@ async def eps_replace_file(message: Message, state: FSMContext, bot: Bot) -> Non
     await state.clear()
     await message.answer(t.EP_REPLACED.format(season=ep["season"], n=ep["number"]),
                          reply_markup=back_panel_kb([btn(t.BTN_BACK, Adm(a="eep", id=ep["id"]))]))
+
+
+async def start_parts(bot: Bot, chat_id: int, state: FSMContext, movie: Row, message: object = None) -> None:
+    """Ko'p qismli film: 2, 3, ... qismlarni ketma-ket yuklash (episodes, season = 0)."""
+    await state.clear()
+    parts = await movies.parts(movie["id"])
+    nxt = (parts[-1]["number"] + 1) if parts else 2
+    await state.set_state(EpAdd.upload)
+    await state.update_data(movie_id=movie["id"], season=0, next_number=nxt)
+    await render(bot, chat_id, message, t.MP_UPLOAD.format(title=esc(movie["title"]), n=nxt), done_kb())

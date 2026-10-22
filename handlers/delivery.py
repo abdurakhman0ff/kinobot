@@ -26,7 +26,7 @@ async def restore_kb(bot: Bot, user_id: int, movie: Row, k: str, episode_id: int
     if k == "e":
         ep = await movies.episode(episode_id)
         return await delivery.episode_nav_kb(movie["id"], ep) if ep else None
-    return await delivery.film_kb(bot, user_id, movie)
+    return await delivery.film_kb(bot, user_id, movie, episode_id)
 
 
 @router.callback_query(Op.filter())
@@ -55,7 +55,7 @@ async def random_watch(callback: CallbackQuery, callback_data: Rnd, bot: Bot, db
     await delivery.open_movie(bot, db_user, callback.from_user.id, movie)
 
 
-@router.callback_query(Card.filter(F.a.in_({"back", "tr", "act", "ac", "sim", "sv", "rep", "rp", "ss", "se"})))
+@router.callback_query(Card.filter(F.a.in_({"back", "tr", "act", "ac", "sim", "sv", "rep", "rp", "ss", "se", "pm"})))
 async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db_user: Row) -> None:
     data = callback_data
     movie = await movies.get(data.m)
@@ -71,6 +71,15 @@ async def card_action(callback: CallbackQuery, callback_data: Card, bot: Bot, db
     elif data.a == "se":
         await answer(callback)
         opened = await delivery.open_episode(bot, db_user, uid, data.v)
+        if opened and callback.message:
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
+
+    elif data.a == "pm":
+        await answer(callback)
+        opened = await delivery.open_movie(bot, db_user, uid, movie)
         if opened and callback.message:
             try:
                 await callback.message.delete()

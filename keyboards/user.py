@@ -71,15 +71,25 @@ def locked_kb() -> InlineKeyboardMarkup:
 
 # ---------- kino kartochkasi ----------
 
-def film_card_kb(movie: dict[str, Any], bot_username: str, saved: bool, comments: int) -> InlineKeyboardMarkup:
+def film_card_kb(movie: dict[str, Any], bot_username: str, saved: bool, comments: int,
+                 parts: Sequence[dict[str, Any]] = (), current: int = 0) -> InlineKeyboardMarkup:
+    """parts: 2, 3, ... qismlar. current: hozirgi qism (0 = 1-qism, aks holda episodes.id)."""
     m = movie["id"]
-    return kb([
+    rows: list[list[Any]] = []
+    if parts:
+        buttons = [btn(("▶️ " if current == 0 else "") + t.MP_N.format(n=1), Card(a="pm", m=m))]
+        for p in parts:
+            buttons.append(btn(("▶️ " if current == p["id"] else "") + t.MP_N.format(n=p["number"]),
+                               Card(a="se", m=m, v=p["id"], k="f", e=current)))
+        rows += chunk(buttons, 4)
+    rows += [
         [btn(t.BTN_RATE, Card(a="rate", m=m)),
-         btn(t.BTN_UNSAVE if saved else t.BTN_SAVE, Card(a="sv", m=m))],
+         btn(t.BTN_UNSAVE if saved else t.BTN_SAVE, Card(a="sv", m=m, e=current))],
         [btn(t.BTN_COMMENTS.format(n=comments), Card(a="cm", m=m)),
-         btn(t.BTN_REPORT, Card(a="rep", m=m))],
+         btn(t.BTN_REPORT, Card(a="rep", m=m, e=current))],
         [btn(t.BTN_SHARE, url=share_url(bot_username, movie))],
-    ])
+    ]
+    return kb(rows)
 
 
 def serial_card_kb(movie: dict[str, Any], bot_username: str, seasons: Sequence[int], saved: bool,

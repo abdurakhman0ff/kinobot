@@ -658,3 +658,20 @@ CARD_ADMIN_OK = "✅ Tasdiqlandi ({admin})"
 CARD_ADMIN_NO = "❌ Rad etildi ({admin})"
 CARD_ALREADY = "Bu to'lov allaqachon ko'rib chiqilgan."
 CARD_REJECTED_USER = "❌ Yuborgan chekingiz tasdiqlanmadi. Savol bo'lsa, qo'llab-quvvatlashga yozing."
+
+
+# ---------- ko'p qismli film ----------
+MP_ADD = "➕ Qism qo'shish"
+MP_BTN = "🎞 Qismlar"
+MP_N = "{n}-qism"
+MP_LABEL = "🎞 {n}-qism"
+MP_UPLOAD = ("🎞 <b>{title}</b>\n\n{n}-qismdan boshlab videolarni ketma-ket yuboring (yoki forward qiling).\n"
+             "1-qism filmning asosiy fayli hisoblanadi. Tugagach «Tayyor» tugmasini bosing.")
+MP_ADDED = "✅ {n}-qism qo'shildi."
+MP_REPLACED = "♻️ {n}-qism almashtirildi."
+MP_NEXT = "Keyingi qism: {n}. Videoni yuboring yoki «Tayyor» ni bosing."
+MP_DONE = "✅ <b>{title}</b>: jami {count} qism."
+MP_TITLE = "🎞 <b>{title}</b>\nJami qismlar: {count} (1-qism — asosiy fayl).\nTahrirlash uchun qismni tanlang:"
+MP_ONE = "🎞 {n}-qism · 👁 {views}"
+MP_REPLACE_SEND = "Yangi videoni yuboring (shu qism almashtiriladi)."
+MP_GONE = "Bu qism topilmadi."
