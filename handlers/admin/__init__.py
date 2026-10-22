@@ -14,6 +14,7 @@ from handlers.admin import (
     panel,
     stats,
     unfilled,
+    vip_users,
 )
 
 
@@ -25,6 +26,7 @@ def build_router() -> Router:
         episodes.router,
         edit_movie.router,
         stats.router,
+        vip_users.router,
         broadcast.router,
         moderation.router,
         unfilled.router,

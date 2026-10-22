@@ -36,6 +36,8 @@ SECTIONS: list[tuple[str, str, str]] = [
     ("moderator", t.ADM_EDIT, "edit"),
     ("moderator", t.ADM_EPISODES, "eps"),
     ("admin", t.ADM_STATS, "st"),
+    ("admin", t.ADM_VIP, "vips"),
+    ("admin", t.ADM_VIP_GIVE, "vipg"),
     ("admin", t.ADM_BROADCAST, "bc"),
     ("admin", t.ADM_BAN, "ban"),
     ("admin", t.ADM_PROMO, "pr"),

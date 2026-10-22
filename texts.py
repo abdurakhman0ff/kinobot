@@ -620,3 +620,18 @@ IMPORT_BAD_FILE = "Faqat .csv fayl (10 MB gacha) yuboring."
 IMPORT_DONE = "✅ Import tugadi.\nYangilandi: {updated}\nTopilmadi: {not_found}\nXato qatorlar: {errors}"
 
 NOT_FOUND = "❌ {code} kodli kino topilmadi.\n\nBoshqa kodni sinab ko'ring yoki 📝 Kino so'rash orqali so'rang."
+
+
+# ---------- VIP egalari / VIP berish ----------
+ADM_VIP = "💎 VIP egalari"
+ADM_VIP_GIVE = "🎁 VIP berish"
+VIP_LIST_TITLE = "💎 <b>VIP egalari</b>: {total} ta\n⚠️ 3 kun ichida tugaydi: {soon} ta"
+VIP_LIST_EMPTY = "Hozircha VIP egalari yo'q."
+VIP_NONE = "VIP yo'q"
+VIP_ASK_TARGET = "🎁 Foydalanuvchi ID raqamini yoki @username ni yuboring."
+VIP_NOT_FOUND = "❌ Bunday foydalanuvchi topilmadi (u botga /start bosgan bo'lishi kerak). Qayta yuboring."
+VIP_ASK_DAYS = ("👤 {name}\n💎 Hozirgi holat: {status}\n\n"
+                "Necha kun VIP berasiz? Son yuboring. Ayirish uchun minus bilan (masalan: -5).")
+VIP_BAD_DAYS = "Iltimos, 0 dan farqli butun son kiriting (masalan: 7 yoki -3)."
+VIP_DONE = "✅ {name} uchun VIP yangilandi.\n⏳ Yangi muddat: {date}"
+VIP_GIVEN_USER = "🎁 Sizga {days} kunlik 💎 VIP berildi!\nMuddat: {date} gacha."

@@ -189,3 +189,30 @@ async def segment_ids(segment: str) -> list[int]:
         {"now": now, "month": month},
     )
     return [r["id"] for r in rows]
+
+
+# ---------- VIP ro'yxati (admin panel) ----------
+
+async def count_vip() -> int:
+    return int(await db.fetchval("SELECT COUNT(*) FROM users WHERE vip_until > ?", (now_db(),)) or 0)
+
+
+async def count_vip_expiring(days: int) -> int:
+    limit = to_db(utcnow() + timedelta(days=days))
+    return int(await db.fetchval(
+        "SELECT COUNT(*) FROM users WHERE vip_until > ? AND vip_until <= ?", (now_db(), limit)) or 0)
+
+
+async def list_vip(limit: int, offset: int) -> list[dict[str, Any]]:
+    return await db.fetchall(
+        """SELECT id, first_name, last_name, username, vip_until FROM users
+           WHERE vip_until > ? ORDER BY vip_until LIMIT ? OFFSET ?""",
+        (now_db(), limit, offset),
+    )
+
+
+async def find(query: str) -> dict[str, Any] | None:
+    q = query.strip()
+    if q.isdigit():
+        return await get(int(q))
+    return await db.fetchone("SELECT * FROM users WHERE LOWER(username) = ?", (q.lstrip("@").lower(),))
