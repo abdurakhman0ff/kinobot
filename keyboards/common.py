@@ -56,7 +56,7 @@ def pages_of(total: int, per_page: int) -> int:
 
 def movie_label(movie: dict[str, Any]) -> str:
     year = f" ({movie['year']})" if movie.get("year") else ""
-    vip = " 💎" if movie.get("is_vip") else ""
+    vip = ""
     return f"🎬 {movie.get('title') or '—'}{year}{vip}"[:60]
 
 

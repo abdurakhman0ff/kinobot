@@ -31,7 +31,7 @@ _CODE_RE = re.compile(r"Kod:\s*(\d+)")
 
 
 def _result(movie: Row, bot_username: str) -> InlineQueryResultArticle:
-    title = f"{movie['title']}{' 💎' if movie['is_vip'] else ''}"
+    title = f"{movie['title']}"
     if movie.get("year"):
         title += f" ({movie['year']})"
     first = f"{type_label(movie['type'])} · #{movie['code']}"

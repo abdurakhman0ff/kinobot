@@ -176,7 +176,7 @@ def movies_back_kb(movies: Sequence[dict[str, Any]], back: Card) -> InlineKeyboa
 
 def _short_label(movie: dict[str, Any]) -> str:
     year = f" ({movie['year']})" if movie.get("year") else ""
-    return f"🎬 {movie['title']}{year}{' 💎' if movie.get('is_vip') else ''}"[:60]
+    return f"🎬 {movie['title']}{year}"[:60]
 
 
 def report_kb(movie_id: int, episode_id: int, k: str) -> InlineKeyboardMarkup:

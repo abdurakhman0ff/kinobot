@@ -287,14 +287,9 @@ async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None 
             )
             return False
 
-        if movie["type"] != "serial":
+        # faqat VIP bo'lmagan va kinoni sotib olgan foydalanuvchi uchun kino umrbod qoladi
+        if movie["type"] != "serial" and not owned:
             await autodelete.schedule(chat_id, sent_id)
-            if autodelete.minutes() > 0:
-                try:
-                    note = await bot.send_message(chat_id, t.AD_NOTE.format(h=autodelete.human()), reply_to_message_id=sent_id)
-                    await autodelete.schedule(chat_id, note.message_id)
-                except TelegramAPIError:
-                    pass
 
         await movies.record_view(user["id"], movie["id"], ep["id"] if ep else None)
         if ep and not is_part:
