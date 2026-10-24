@@ -25,10 +25,11 @@ from handlers.admin.common import (
 )
 from keyboards.callbacks import Adm
 from keyboards.common import btn, chunk, kb
+from services import gifts as gift_media
 from services import posts, search
 from services.cards import card_caption, type_label
 from services.tmdb import kind_of, poster_url, result_title, result_year, tmdb
-from utils.text import esc, parse_int, split_csv, truncate
+from utils.text import esc, money, parse_int, split_csv, truncate
 from utils.time import fmt_local, parse_local, to_db, utcnow
 from utils.ui import answer, render
 
@@ -56,6 +57,7 @@ class AddMovie(StatesGroup):
     langs = State()
     lang_text = State()
     vip = State()
+    price = State()
     desc = State()
     desc_text = State()
     code = State()
@@ -64,14 +66,14 @@ class AddMovie(StatesGroup):
     post_time = State()
 
 
-ORDER = ["quality", "langs", "vip", "desc", "code", "preview"]
+ORDER = ["quality", "langs", "vip", "price", "desc", "code", "preview"]
 MANUAL = ["m_year", "m_genres", "m_countries", "m_runtime", "m_poster"]
 MANUAL_PROMPTS = {
     "m_year": t.ADD_M_YEAR, "m_genres": t.ADD_M_GENRES, "m_countries": t.ADD_M_COUNTRIES,
     "m_runtime": t.ADD_M_RUNTIME, "m_poster": t.ADD_M_POSTER,
 }
 EDITABLE = [("title", t.F_TITLE), ("quality", t.F_QUALITY), ("langs", t.F_LANGS), ("vip", t.F_VIP),
-            ("desc", t.F_DESC), ("code", t.F_CODE)]
+            ("price", t.BM_F_PRICE), ("desc", t.F_DESC), ("code", t.F_CODE)]
 
 
 def compose(data: dict[str, Any]) -> Row:
@@ -86,6 +88,7 @@ def compose(data: dict[str, Any]) -> Row:
         quality=data.get("quality"),
         languages=", ".join(data.get("languages") or []) or None,
         is_vip=int(data.get("is_vip", 0)),
+        price=int(data.get("price") or 0),
         description=data.get("description"),
         code=data.get("code") or 0,
         storage_message_id=data.get("storage_message_id"),
@@ -115,6 +118,9 @@ async def ask(step: str, bot: Bot, chat_id: int, state: FSMContext, message: obj
     elif step == "vip":
         markup = cancel_kb([btn(t.BTN_VIP_CONTENT, Adm(a="vp", v="1")), btn(t.BTN_FREE_CONTENT, Adm(a="vp", v="0"))])
         text = t.ADD_VIP
+    elif step == "price":
+        markup = cancel_kb([btn(t.BM_BTN_FREE, Adm(a="pr", v="0"))])
+        text = t.BM_ADD_PRICE
     elif step == "desc":
         row = [btn(t.BTN_DESC_TMDB, Adm(a="ds", v="tmdb"))] if data.get("tmdb_desc") else []
         row += [btn(t.BTN_DESC_OWN, Adm(a="ds", v="own")), btn(t.BTN_DESC_NONE, Adm(a="ds", v="none"))]
@@ -154,6 +160,8 @@ async def show_preview(bot: Bot, chat_id: int, state: FSMContext) -> None:
     data = await state.get_data()
     movie = compose(data)
     caption = t.ADD_PREVIEW_HEAD.format(type=type_label(movie["type"])) + "\n\n" + card_caption(movie)
+    if movie.get("price"):
+        caption += f"\n\n💰 Narx: <b>{money(movie['price'])} so'm</b>"
     markup = kb([
         [btn(t.BTN_SAVE_MOVIE, Adm(a="sv")), btn(t.BTN_EDIT, Adm(a="ed"))],
         [btn(t.BTN_CANCEL, Adm(a="x"))],
@@ -221,7 +229,12 @@ async def got_file(message: Message, state: FSMContext, bot: Bot) -> None:
 
 @router.message(AddMovie.title, F.text)
 async def got_title(message: Message, state: FSMContext, bot: Bot) -> None:
-    title = message.text.strip()[:200]
+    await search_title(message, message.text, state, bot)
+
+
+async def search_title(message: Message, raw_title: str, state: FSMContext, bot: Bot) -> None:
+    """Nom bo'yicha TMDB qidiruvi (hadya oqimidan ham chaqiriladi)."""
+    title = raw_title.strip()[:200]
     await state.update_data(title=title)
     data = await state.get_data()
     kind = kind_of(data.get("type", "film"))
@@ -385,6 +398,23 @@ async def choose_vip(callback: CallbackQuery, callback_data: Adm, state: FSMCont
     await answer(callback)
 
 
+@router.callback_query(AddMovie.price, Adm.filter(F.a == "pr"))
+async def choose_price_free(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
+    await state.update_data(price=0)
+    await proceed("price", bot, callback.from_user.id, state, callback.message)
+    await answer(callback)
+
+
+@router.message(AddMovie.price, F.text)
+async def price_text(message: Message, state: FSMContext, bot: Bot) -> None:
+    price = parse_int(message.text)
+    if price is None or price < 0 or price > 100_000_000:
+        await message.answer(t.BAD_NUMBER)
+        return
+    await state.update_data(price=price)
+    await proceed("price", bot, message.chat.id, state)
+
+
 @router.callback_query(AddMovie.desc, Adm.filter(F.a == "ds"))
 async def choose_desc(callback: CallbackQuery, callback_data: Adm, state: FSMContext, bot: Bot) -> None:
     if callback_data.v == "own":
@@ -474,6 +504,8 @@ async def save(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
             return
         movie["code"] = await movies.next_code()
     movie_id = await movies.create(movie)
+    if data.get("gift_id"):
+        await gift_media.attach(bot, int(data["gift_id"]), movie_id)
     search.invalidate()
     await state.clear()
     saved = await movies.get(movie_id)

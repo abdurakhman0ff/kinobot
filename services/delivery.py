@@ -16,9 +16,10 @@ from aiogram.types import InlineKeyboardMarkup
 
 import config
 import texts as t
-from database import movies, settings, users
+from database import movies, purchases, settings, users
 from keyboards.user import (
     back_kb,
+    buy_kb,
     episode_kb,
     film_card_kb,
     locked_kb,
@@ -29,7 +30,7 @@ from keyboards.user import (
 )
 from services import limits, notify, subscription
 from services.cards import card_caption, episode_caption, locked_caption, poster_of, remember_poster
-from utils.text import chat_ref, esc
+from utils.text import chat_ref, esc, money
 from utils.time import fmt_duration
 from utils.ui import render, render_photo
 
@@ -122,10 +123,20 @@ async def send_locked_card(bot: Bot, chat_id: int, movie: Row, message: object =
     await show_card(bot, chat_id, message, movie, locked_caption(movie), locked_kb())
 
 
+async def send_buy_card(bot: Bot, chat_id: int, movie: Row, message: object = None) -> None:
+    caption = card_caption(movie, t.BM_INFO.format(price=money(movie["price"])))
+    await show_card(bot, chat_id, message, movie, caption, buy_kb(movie))
+
+
 async def send_serial_card(bot: Bot, user: Row, chat_id: int, movie: Row, message: object = None) -> None:
-    if movie["is_vip"] and not users.is_privileged(user):
-        await send_locked_card(bot, chat_id, movie, message)
-        return
+    if not users.is_privileged(user):
+        if int(movie.get("price") or 0) > 0:
+            if not await purchases.owned(user["id"], movie["id"]):
+                await send_buy_card(bot, chat_id, movie, message)
+                return
+        elif movie["is_vip"]:
+            await send_locked_card(bot, chat_id, movie, message)
+            return
     await show_card(bot, chat_id, message, movie, await serial_caption(movie),
                     await serial_kb(bot, user["id"], movie))
 
@@ -220,15 +231,30 @@ async def send_video(bot: Bot, chat_id: int, src: Row, caption: str, kb: InlineK
 async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None = None) -> bool:
     """Obuna tekshiruvidan keyin chaqiriladi: VIP qulf -> limit -> yuborish -> hisob."""
     privileged = users.is_privileged(user)
-    if movie["is_vip"] and not privileged:
-        await send_locked_card(bot, chat_id, movie)
-        return False
+    owned = False
+    if not privileged:
+        if int(movie.get("price") or 0) > 0:
+            owned = await purchases.owned(user["id"], movie["id"])
+            if not owned:
+                await send_buy_card(bot, chat_id, movie)
+                return False
+        elif movie["is_vip"]:
+            await send_locked_card(bot, chat_id, movie)
+            return False
+    vip_counted = privileged and not users.has_role(user["id"], "moderator")
 
     is_part = bool(ep and ep["season"] == 0)  # ko'p qismli film qismi (serial qismi emas)
     kind = "series" if ep and not is_part else "movie"
     item_key = f"e{ep['id']}" if ep else f"m{movie['id']}"
     async with _lock_for(user["id"]):
-        if not privileged:
+        if vip_counted:
+            verdict = await limits.check(user["id"], "vip", item_key)
+            if not verdict.allowed:
+                await bot.send_message(chat_id, t.BM_VIP_LIMIT.format(
+                    n=limits.limit_of("vip"), left=fmt_duration(verdict.seconds_left)))
+                await users.add_event(user["id"], "limit_hit", {"kind": "vip"})
+                return False
+        elif not privileged and not owned:
             verdict = await limits.check(user["id"], kind, item_key)
             if not verdict.allowed:
                 await bot.send_message(chat_id, t.LIMIT_REACHED.format(left=fmt_duration(verdict.seconds_left)),
@@ -260,6 +286,8 @@ async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None 
         await movies.record_view(user["id"], movie["id"], ep["id"] if ep else None)
         if ep and not is_part:
             await movies.set_progress(user["id"], movie["id"], ep["season"], ep["number"])
-        if not privileged:
+        if vip_counted:
+            await limits.consume(user["id"], "vip", item_key)
+        elif not privileged and not owned:
             await limits.consume(user["id"], kind, item_key)
     return True

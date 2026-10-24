@@ -64,6 +64,7 @@ TABLES: dict[str, tuple[list[tuple[str, str]], list[str]]] = {
             ("rating_sum", "INTEGER NOT NULL DEFAULT 0"),
             ("rating_count", "INTEGER NOT NULL DEFAULT 0"),
             ("trailer_url", "TEXT"),  # NULL = hali so'ralmagan, '' = topilmadi
+            ("price", "INTEGER DEFAULT 0"),  # so'm; 0 = bepul
             ("created_at", f"TEXT DEFAULT {NOW}"),
             ("updated_at", f"TEXT DEFAULT {NOW}"),
         ],
@@ -239,6 +240,34 @@ TABLES: dict[str, tuple[list[tuple[str, str]], list[str]]] = {
         ],
         [],
     ),
+    "gifts": (
+        [
+            ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+            ("user_id", "INTEGER NOT NULL"),
+            ("type", "TEXT NOT NULL DEFAULT 'film'"),
+            ("title", "TEXT NOT NULL DEFAULT ''"),
+            ("files", "TEXT NOT NULL DEFAULT '[]'"),
+            ("status", "TEXT NOT NULL DEFAULT 'new'"),
+            ("reward_days", "INTEGER NOT NULL DEFAULT 0"),
+            ("movie_id", "INTEGER"),
+            ("reason", "TEXT"),
+            ("created_at", f"TEXT DEFAULT {NOW}"),
+            ("decided_at", "TEXT"),
+        ],
+        [],
+    ),
+    "purchases": (
+        [
+            ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+            ("user_id", "INTEGER NOT NULL"),
+            ("movie_id", "INTEGER NOT NULL"),
+            ("price", "INTEGER NOT NULL DEFAULT 0"),
+            ("status", "TEXT NOT NULL DEFAULT 'pending'"),
+            ("created_at", f"TEXT DEFAULT {NOW}"),
+            ("decided_at", "TEXT"),
+        ],
+        [],
+    ),
     "events": (
         [
             ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
@@ -261,9 +290,11 @@ INDEXES = [
     "CREATE INDEX IF NOT EXISTS ix_ratings_movie ON ratings(movie_id)",
     "CREATE INDEX IF NOT EXISTS ix_events_kind ON events(kind, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_payments_user ON payments(user_id)",
+    "CREATE INDEX IF NOT EXISTS ix_purchases_user ON purchases(user_id, movie_id, status)",
     "CREATE INDEX IF NOT EXISTS ix_requests_status ON requests(status, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_reports_status ON reports(status, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_scheduled_status ON scheduled_posts(status, run_at)",
+    "CREATE INDEX IF NOT EXISTS ix_gifts_user ON gifts(user_id, status)",
 ]
 
 _STRIP_RE = re.compile(

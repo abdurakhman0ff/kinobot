@@ -24,7 +24,9 @@ router.callback_query.filter(RoleFilter("owner"))
 
 Row = dict[str, Any]
 
-LIMIT_KEYS = {"movie_limit": t.LIM_MOVIE, "series_limit": t.LIM_SERIES, "window_hours": t.LIM_WINDOW}
+LIMIT_KEYS = {"movie_limit": t.LIM_MOVIE, "series_limit": t.LIM_SERIES, "window_hours": t.LIM_WINDOW,
+              "gift_vip_days": t.LIM_GIFT_DAYS, "gift_month_cap": t.LIM_GIFT_CAP,
+              "gift_pending_max": t.LIM_GIFT_PENDING}
 SETTING_KEYS = {
     "support_username": t.SET_SUPPORT,
     "public_channel_url": t.SET_CHANNEL_URL,

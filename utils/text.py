@@ -56,3 +56,8 @@ def chat_ref(value: object) -> int | str | None:
     if raw.lstrip("-").isdigit():
         return int(raw)
     return raw if raw.startswith("@") else "@" + raw
+
+
+def money(n) -> str:
+    """12000 -> 12 000."""
+    return f"{int(n or 0):,}".replace(",", " ")

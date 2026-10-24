@@ -73,3 +73,15 @@ class Pay(CallbackData, prefix="py"):
     """Qo'lda (karta) to'lov: a = ok / no (admin), x = bekor (foydalanuvchi)."""
     a: str
     id: int = 0
+
+
+class Gift(CallbackData, prefix="gf"):
+    """Kino hadyasi: t = tur, go = davom, send = yuborish, x = bekor; admin: ok / no / nr (sabab) / bk."""
+    a: str
+    id: int = 0
+    v: str | None = None
+
+
+class Buy(CallbackData, prefix="by"):
+    a: str
+    id: int = 0

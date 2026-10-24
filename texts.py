@@ -675,3 +675,81 @@ MP_TITLE = "🎞 <b>{title}</b>\nJami qismlar: {count} (1-qism — asosiy fayl).
 MP_ONE = "🎞 {n}-qism · 👁 {views}"
 MP_REPLACE_SEND = "Yangi videoni yuboring (shu qism almashtiriladi)."
 MP_GONE = "Bu qism topilmadi."
+
+
+# ---------- kino hadyasi (VIP evaziga) ----------
+BTN_GIFT = "🎁 Kino hadya qilib VIP oling"
+LIM_GIFT_DAYS = "🎁 Hadya: VIP kun"
+LIM_GIFT_CAP = "🎁 Hadya: oylik limit (kun)"
+LIM_GIFT_PENDING = "🎁 Hadya: kutayotganlar soni"
+GIFT_INTRO = ("🎁 <b>Kino hadya qiling — VIP oling!</b>\n\n"
+              "Bazada yo'q kino yoki serialni yuboring. Admin tasdiqlasa, sizga <b>{days} kun VIP</b> beriladi "
+              "(oyiga {cap} kungacha).\n\nTurni tanlang:")
+GIFT_PENDING_LIMIT = "Sizda tekshiruvni kutayotgan {n} ta hadya bor. Natijani kuting."
+GIFT_CAP = "Bu oy uchun hadya orqali VIP limiti to'ldi ({cap} kun). Keyingi oy yana urinib ko'ring."
+GIFT_ASK_TITLE = "Kino/serial nomini yozing (masalan: <i>Forsaj 5</i>):"
+GIFT_DUP = ("⚠️ Bazada shunga o'xshash nomlar bor:\n\n{items}\n\n"
+            "Sizniki shulardan biri bo'lsa, botdan uni toping. Boshqa kino bo'lsa, davom eting.")
+GIFT_BTN_CONTINUE = "✅ Bu boshqa kino, davom etish"
+GIFT_ASK_FILES = ("📤 Endi video faylni yuboring ({type}).\nKo'p qismli bo'lsa, qismlarni tartib bilan "
+                  "ketma-ket yuboring (ko'pi bilan {max} ta). Tugagach «Yuborish» ni bosing.")
+GIFT_NEED_FILE = "Iltimos, video yoki fayl yuboring."
+GIFT_FILE_OK = "✅ {n}-fayl qabul qilindi. Yana yuboring yoki «Yuborish» ni bosing."
+GIFT_FILE_MAX = "Ko'pi bilan {max} ta fayl. «Yuborish» ni bosing."
+GIFT_BTN_SEND = "📨 Yuborish"
+GIFT_SENT = "✅ Hadyangiz adminga yuborildi. Tasdiqlansa, VIP avtomatik beriladi va sizga xabar keladi."
+GIFT_CANCELLED = "❌ Bekor qilindi."
+GIFT_ADMIN = ("🎁 <b>Yangi hadya #{id}</b>\n\n🎬 {title}\n📂 Tur: {type}\n🎞 Fayllar: {n}\n"
+              "👤 {name} · <code>{user_id}</code>")
+GIFT_BTN_OK = "✅ Qabul qilish"
+GIFT_BTN_NO = "❌ Rad etish"
+GIFT_REASONS = ["Bazada bor", "Sifati past", "Mos emas / noto'g'ri nom", "Fayl buzilgan"]
+GIFT_ADMIN_OK = "✅ Qabul qilindi (kod {code})\nℹ️ Tavsif va TMDB ni «To'ldirilmaganlar» bo'limidan to'ldiring."
+GIFT_ADMIN_NO = "❌ Rad etildi: {reason}"
+GIFT_APPROVED_USER = ("🎉 Rahmat! «{title}» bazaga qo'shildi (kod: <code>{code}</code>).\n"
+                      "💎 Sizga +{days} kun VIP berildi ({date} gacha).")
+GIFT_APPROVED_NOREWARD = ("🎉 Rahmat! «{title}» bazaga qo'shildi (kod: <code>{code}</code>).\n"
+                          "Bu oy uchun VIP limiti to'lgani sababli VIP berilmadi.")
+GIFT_REJECTED_USER = "❌ «{title}» hadyasi qabul qilinmadi.\nSabab: {reason}"
+GIFT_ALREADY = "Bu hadya allaqachon ko'rib chiqilgan."
+GIFT_FAILED = "❌ Fayllarni saqlab bo'lmadi: {error}"
+
+
+# ---------- hadya: qabul qilingach bazaga qo'shish ----------
+GIFT_BTN_ADD = "➕ Bazaga qo'shish"
+GIFT_ADMIN_OK = "✅ Qabul qilindi, VIP berildi.\n👇 Endi kinoni bazaga qo'shing (nom, tur va video oldindan to'ldiriladi):"
+GIFT_APPROVED_USER = ("🎉 Rahmat! «{title}» hadyangiz qabul qilindi.\n"
+                      "💎 Sizga +{days} kun VIP berildi ({date} gacha). Kino tez orada bazaga qo'shiladi.")
+GIFT_APPROVED_NOREWARD = ("🎉 Rahmat! «{title}» hadyangiz qabul qilindi.\n"
+                          "Bu oy uchun VIP limiti to'lgani sababli VIP berilmadi.")
+GIFT_ADDED_ALREADY = "Bu hadya allaqachon bazaga qo'shilgan."
+GIFT_ADD_FAILED = "❌ Faylni saqlab bo'lmadi: {error}"
+
+
+BTN_SUB_VIP = "💎 VIP olish — obunasiz foydalanish"
+
+
+# ===== kinoni alohida sotish =====
+BM_F_PRICE = "Narx"
+BM_BTN_FREE = "🆓 Bepul"
+BM_ADD_PRICE = "💰 Kino narxini so'mda yozing (masalan: 5000) yoki bepul qoldiring.\n\nNarxli kinoni foydalanuvchilar alohida sotib oladi, VIP egalari esa bepul ko'radi."
+BM_BTN_BUY = "🛒 Kinoni sotib olish — {price} so'm"
+BM_BTN_VIP = "💎 VIP olish"
+BM_INFO = "🔒 Bu kino alohida sotiladi.\n💰 Narxi: <b>{price} so'm</b>\n\nSotib olsangiz kino doimiy sizniki bo'ladi. VIP egalari bepul ko'radi."
+BM_CARD = "🛒 <b>{title}</b>\n\n💳 Karta: <code>{card}</code>\n👤 Karta egasi: {owner}\n💰 To'lov summasi: <b>{price} so'm</b>\n\nTo'lovni amalga oshirib, <b>chek rasmini</b> shu yerga yuboring."
+BM_NO_CARD = "⚠️ Hozircha karta orqali to'lov qabul qilinmayapti."
+BM_OWNED = "✅ Bu kino sizda allaqachon bor."
+BM_FREE_NOW = "Bu kino hozir bepul."
+BM_SENT = "✅ Chek yuborildi. Admin tasdiqlagach kino avtomatik yuboriladi."
+BM_NEED_PHOTO = "Iltimos, chek rasmini yuboring."
+BM_TOO_MANY = "Sizda tasdiqlanmagan to'lovlar ko'p, biroz kuting."
+BM_CANCELLED = "Bekor qilindi."
+BM_ADMIN_CAPTION = "🛒 <b>Kino sotib olish</b>\n👤 {name} (<code>{uid}</code>)\n🎬 {title} [{code}]\n💰 {price} so'm\n#{pid}"
+BM_BTN_OK = "✅ Tasdiqlash"
+BM_BTN_NO = "❌ Rad etish"
+BM_ADMIN_OK = "✅ Tasdiqladi: {admin}"
+BM_ADMIN_NO = "❌ Rad etdi: {admin}"
+BM_ALREADY = "Allaqachon ko'rib chiqilgan."
+BM_APPROVED_USER = "✅ To'lov tasdiqlandi! <b>{title}</b> endi sizniki. Kino yuborilmoqda..."
+BM_REJECTED_USER = "❌ To'lovingiz tasdiqlanmadi. Muammo bo'lsa admin bilan bog'laning."
+BM_VIP_LIMIT = "⏳ VIP kunlik limitga yetdingiz ({n} ta kino). Limit {left} dan keyin yangilanadi."

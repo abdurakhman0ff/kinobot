@@ -20,6 +20,8 @@ class Verdict:
 
 
 def limit_of(kind: str) -> int:
+    if kind == "vip":
+        return settings.get_int("vip_limit", 15)
     return settings.get_int("series_limit" if kind == "series" else "movie_limit", 3)
 
 

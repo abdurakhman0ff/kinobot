@@ -19,7 +19,7 @@ from keyboards.common import btn, chunk, kb
 from services import search
 from services.cards import fmt_rating, type_label
 from services.tmdb import kind_of, tmdb
-from utils.text import esc, parse_int, split_csv, truncate
+from utils.text import esc, money, parse_int, split_csv, truncate
 from utils.time import fmt_runtime
 from utils.ui import answer, render
 
@@ -49,6 +49,7 @@ TEXT_FIELDS: dict[str, tuple[str, str]] = {
     "runtime_min": (t.F_RUNTIME, "int"),
     "quality": (t.F_QUALITY, "str"),
     "code": (t.F_CODE, "int"),
+    "price": (t.BM_F_PRICE, "int"),
 }
 
 
@@ -56,6 +57,7 @@ def movie_admin_text(movie: Row, episodes_count: int | None) -> str:
     lines = [
         t.EDIT_HEAD.format(title=esc(movie["title"]), code=movie["code"], id=movie["id"]),
         f"{t.F_TYPE}: {type_label(movie['type'])} · {'💎 VIP' if movie['is_vip'] else t.FREE}",
+        f"{t.BM_F_PRICE}: " + (f"{money(movie.get('price'))} so'm" if movie.get('price') else "—"),
         f"{t.F_ORIGINAL}: {esc(movie.get('original_title') or '—')}",
         f"{t.F_YEAR}: {movie.get('year') or '—'} · {t.F_RUNTIME}: {fmt_runtime(movie.get('runtime_min')) or '—'}",
         f"{t.F_GENRES}: {esc(movie.get('genres') or '—')}",

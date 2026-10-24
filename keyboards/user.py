@@ -7,7 +7,7 @@ from urllib.parse import quote
 from aiogram.types import InlineKeyboardMarkup
 
 import texts as t
-from keyboards.callbacks import Card, Nav, Op, Req, Rnd, SubCheck, Vip
+from keyboards.callbacks import Buy, Card, Nav, Op, Req, Rnd, SubCheck, Vip
 from keyboards.common import NOOP, btn, chunk, kb, nav_row
 from utils.text import som
 
@@ -53,6 +53,7 @@ def subscribe_kb(items: Sequence[dict[str, Any]]) -> InlineKeyboardMarkup:
         if link:
             rows.append([btn(f"➕ {item['title']}", url=link)])
     rows.append([btn(t.BTN_CHECK, SubCheck())])
+    rows.append([btn(t.BTN_SUB_VIP, Nav(to="vip"))])
     return kb(rows)
 
 
@@ -213,6 +214,7 @@ def watch_url_kb(bot_username: str, code: int, text: str = t.BTN_WATCH) -> Inlin
 def tariffs_kb(tariffs: Sequence[dict[str, Any]]) -> InlineKeyboardMarkup:
     rows = [[btn(t.TARIFF_BTN.format(days=x["days"], price=som(x["price_uzs"])), Vip(a="t", t=x["id"]))]
             for x in tariffs]
+    rows.append([btn(t.BTN_GIFT, Nav(to="gift"))])
     rows.append(nav_row())
     return kb(rows)
 
@@ -229,3 +231,11 @@ def pay_methods_kb(tariff: dict[str, Any], click_enabled: bool) -> InlineKeyboar
 
 def renew_kb() -> InlineKeyboardMarkup:
     return kb([[btn(t.BTN_RENEW, Nav(to="vip"))]])
+
+
+def buy_kb(movie: dict[str, Any]) -> InlineKeyboardMarkup:
+    from utils.text import money
+    return kb([
+        [btn(t.BM_BTN_BUY.format(price=money(movie["price"])), Buy(a="go", id=movie["id"]))],
+        [btn(t.BM_BTN_VIP, Nav(to="vip"))],
+    ])
