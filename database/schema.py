@@ -268,6 +268,15 @@ TABLES: dict[str, tuple[list[tuple[str, str]], list[str]]] = {
         ],
         [],
     ),
+    "autodelete": (
+        [
+            ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+            ("chat_id", "INTEGER NOT NULL"),
+            ("message_id", "INTEGER NOT NULL"),
+            ("delete_at", "TEXT NOT NULL"),
+        ],
+        [],
+    ),
     "events": (
         [
             ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
@@ -291,6 +300,7 @@ INDEXES = [
     "CREATE INDEX IF NOT EXISTS ix_events_kind ON events(kind, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_payments_user ON payments(user_id)",
     "CREATE INDEX IF NOT EXISTS ix_purchases_user ON purchases(user_id, movie_id, status)",
+    "CREATE INDEX IF NOT EXISTS ix_autodelete_at ON autodelete(delete_at)",
     "CREATE INDEX IF NOT EXISTS ix_requests_status ON requests(status, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_reports_status ON reports(status, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_scheduled_status ON scheduled_posts(status, run_at)",

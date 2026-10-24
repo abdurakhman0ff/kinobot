@@ -753,3 +753,6 @@ BM_ALREADY = "Allaqachon ko'rib chiqilgan."
 BM_APPROVED_USER = "✅ To'lov tasdiqlandi! <b>{title}</b> endi sizniki. Kino yuborilmoqda..."
 BM_REJECTED_USER = "❌ To'lovingiz tasdiqlanmadi. Muammo bo'lsa admin bilan bog'laning."
 BM_VIP_LIMIT = "⏳ VIP kunlik limitga yetdingiz ({n} ta kino). Limit {left} dan keyin yangilanadi."
+
+
+AD_NOTE = "⏳ Bu kino {h} dan so'ng chatdan o'chiriladi. Qayta ko'rish uchun kodni yana kiriting."

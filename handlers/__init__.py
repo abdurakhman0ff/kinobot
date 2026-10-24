@@ -1,4 +1,4 @@
-from handlers import buy
+from handlers import auto_delete, buy
 """Routerlarni tartib bilan ulash. Tartib muhim: aniq holatlar umumiy matn qidiruvidan oldin."""
 from aiogram import Router
 
@@ -38,7 +38,7 @@ def build_router() -> Router:
         saved.router,
         profile.router,
         requests.router,
-        gifts.router, buy.router,
+        gifts.router, buy.router, auto_delete.router,
         promo.router,
         help.router,
         vip.router,

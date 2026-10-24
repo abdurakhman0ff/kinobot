@@ -28,7 +28,7 @@ from keyboards.user import (
     serial_card_kb,
     vip_offer_kb,
 )
-from services import limits, notify, subscription
+from services import autodelete, limits, notify, subscription
 from services.cards import card_caption, episode_caption, locked_caption, poster_of, remember_poster
 from utils.text import chat_ref, esc, money
 from utils.time import fmt_duration
@@ -187,45 +187,48 @@ async def open_episode(bot: Bot, user: Row, chat_id: int, episode_id: int, check
 # ---------- yuborish ----------
 
 async def _copy(bot: Bot, chat_id: int, from_chat: int | str, message_id: int, caption: str,
-                kb: InlineKeyboardMarkup, protect: bool) -> bool:
+                kb: InlineKeyboardMarkup, protect: bool) -> int:
+    """Yuborilgan xabar id si (0 = yuborilmadi)."""
     for attempt in range(2):
         try:
-            await bot.copy_message(chat_id, from_chat, message_id, caption=caption,
-                                   reply_markup=kb, protect_content=protect)
-            return True
+            sent = await bot.copy_message(chat_id, from_chat, message_id, caption=caption,
+                                          reply_markup=kb, protect_content=protect)
+            return sent.message_id
         except TelegramRetryAfter as exc:
             if attempt:
-                return False
+                return 0
             await asyncio.sleep(exc.retry_after + 1)
         except TelegramForbiddenError:
             raise
         except TelegramAPIError as exc:
             log.warning("copy_message %s/%s xato: %s", from_chat, message_id, exc)
-            return False
-    return False
+            return 0
+    return 0
 
 
 async def send_video(bot: Bot, chat_id: int, src: Row, caption: str, kb: InlineKeyboardMarkup,
-                     protect: bool) -> bool:
-    """Saqlash kanali -> zaxira kanal -> eski file_id tartibida urinadi."""
+                     protect: bool) -> int:
+    """Saqlash kanali -> zaxira kanal -> eski file_id tartibida urinadi. Xabar id si yoki 0."""
     sources = [
         (config.STORAGE_CHANNEL_ID, src.get("storage_message_id")),
         (chat_ref(settings.get("backup_channel_id")), src.get("backup_message_id")),
     ]
     for from_chat, message_id in sources:
-        if from_chat and message_id and await _copy(bot, chat_id, from_chat, message_id, caption, kb, protect):
-            return True
+        if from_chat and message_id:
+            sent_id = await _copy(bot, chat_id, from_chat, message_id, caption, kb, protect)
+            if sent_id:
+                return sent_id
     file_id = src.get("file_id")
     if file_id:
         for sender in (bot.send_video, bot.send_document):
             try:
-                await sender(chat_id, file_id, caption=caption, reply_markup=kb, protect_content=protect)
-                return True
+                sent = await sender(chat_id, file_id, caption=caption, reply_markup=kb, protect_content=protect)
+                return sent.message_id
             except TelegramForbiddenError:
                 raise
             except TelegramAPIError as exc:
                 log.debug("file_id bilan yuborilmadi: %s", exc)
-    return False
+    return 0
 
 
 async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None = None) -> bool:
@@ -272,7 +275,8 @@ async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None 
             caption = card_caption(movie, t.MP_LABEL.format(n=1) if has_parts else "")
             kb, src = await film_kb(bot, user["id"], movie), movie
 
-        if not await send_video(bot, chat_id, src, caption, kb, protect=True):
+        sent_id = await send_video(bot, chat_id, src, caption, kb, protect=True)
+        if not sent_id:
             await bot.send_message(chat_id, t.VIDEO_UNAVAILABLE)
             where = t.ADMIN_EP_SUFFIX.format(season=ep["season"], number=ep["number"]) if ep else ""
             await notify.owner(
@@ -282,6 +286,15 @@ async def deliver(bot: Bot, user: Row, chat_id: int, movie: Row, ep: Row | None 
                 every=600,
             )
             return False
+
+        if movie["type"] != "serial":
+            await autodelete.schedule(chat_id, sent_id)
+            if autodelete.minutes() > 0:
+                try:
+                    note = await bot.send_message(chat_id, t.AD_NOTE.format(h=autodelete.human()), reply_to_message_id=sent_id)
+                    await autodelete.schedule(chat_id, note.message_id)
+                except TelegramAPIError:
+                    pass
 
         await movies.record_view(user["id"], movie["id"], ep["id"] if ep else None)
         if ep and not is_part:
