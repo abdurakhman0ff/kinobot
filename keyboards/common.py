@@ -14,14 +14,27 @@ NOOP = "noop"
 Btn = InlineKeyboardButton
 
 
+def _premium(text: str) -> tuple[str, str | None]:
+    """Boshlanishidagi emoji uchun premium ID bo'lsa (matn, id), aks holda (matn, None)."""
+    from utils import emoji
+    if emoji.ENABLED:
+        for char, custom_id in emoji.PREMIUM.items():
+            if text.startswith(char):
+                rest = text[len(char):].lstrip()
+                if rest:
+                    return rest, custom_id
+    return text, None
+
+
 def btn(text: str, cb: CallbackData | str | None = None, *, url: str | None = None,
         inline: str | None = None) -> InlineKeyboardButton:
+    text, icon = _premium(text)
     if url:
-        return Btn(text=text, url=url)
+        return Btn(text=text, url=url, icon_custom_emoji_id=icon)
     if inline is not None:
-        return Btn(text=text, switch_inline_query_current_chat=inline)
+        return Btn(text=text, switch_inline_query_current_chat=inline, icon_custom_emoji_id=icon)
     data = cb.pack() if isinstance(cb, CallbackData) else (cb or NOOP)
-    return Btn(text=text, callback_data=data)
+    return Btn(text=text, callback_data=data, icon_custom_emoji_id=icon)
 
 
 def kb(rows: Sequence[Sequence[InlineKeyboardButton]]) -> InlineKeyboardMarkup:
