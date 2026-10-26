@@ -100,16 +100,10 @@ def serial_card_kb(movie: dict[str, Any], bot_username: str, seasons: Sequence[i
     if cont:
         ep_id, season, number = cont
         rows.append([btn(t.BTN_CONTINUE.format(season=season, number=number), Card(a="se", m=m, v=ep_id, k="s"))])
-    trailer = (
-        btn(t.BTN_TRAILER, url=movie["trailer_url"]) if movie.get("trailer_url")
-        else btn(t.BTN_TRAILER, Card(a="tr", m=m, k="s"))
-    )
     rows += [
         [btn(t.BTN_RATE, Card(a="rate", m=m, k="s")),
          btn(t.BTN_UNSAVE if saved else t.BTN_SAVE, Card(a="sv", m=m, k="s"))],
         [btn(t.BTN_SHARE_SHORT, url=share_url(bot_username, movie))],
-        [btn(t.BTN_ACTORS, Card(a="act", m=m, k="s")), trailer],
-        [btn(t.BTN_REPORT, Card(a="rep", m=m, k="s"))],
     ]
     return kb(rows)
 
