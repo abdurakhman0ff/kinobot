@@ -19,3 +19,17 @@ async def emoji_ids(message: Message) -> None:
         await message.answer("Buyruq yoniga premium emoji yozing, masalan: /emojiid (emoji)")
         return
     await message.answer("\n".join(f"<code>{i}</code>" for i in ids))
+
+
+@router.message(Command("rmkb"))
+async def remove_reply_keyboard(message: Message) -> None:
+    """Eski versiyadan qolgan pastki (reply) klaviaturani chatdan olib tashlaydi."""
+    if not users.has_role(message.from_user.id, "admin"):  # type: ignore[union-attr]
+        return
+    from aiogram.types import ReplyKeyboardRemove
+
+    sent = await message.answer("✅ Pastki tugmalar olib tashlandi.", reply_markup=ReplyKeyboardRemove())
+    try:
+        await sent.delete()
+    except Exception:  # noqa: BLE001
+        pass
