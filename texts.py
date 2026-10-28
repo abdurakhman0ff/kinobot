@@ -756,3 +756,14 @@ BM_VIP_LIMIT = "⏳ VIP kunlik limitga yetdingiz ({n} ta kino). Limit {left} dan
 
 
 AD_NOTE = "⏳ Bu kino {h} dan so'ng chatdan o'chiriladi. Qayta ko'rish uchun kodni yana kiriting."
+
+
+# --- treyler ---
+BM_F_TRAILER = "🎞 Treyler"
+BM_ADD_TRAILER = "🎞 Treyler videosini yuboring (oddiy video sifatida, fayl emas).\n\nTreyler narxli kino kodi yozilganda ko'rinadi. Kerak bo'lmasa «O'tkazib yuborish»ni bosing."
+BM_TRAILER_BAD = "❌ Treyler videosini yuboring (oddiy video sifatida). Bekor qilish: /cancel"
+BM_TRAILER_SAVED = "✅ Treyler saqlandi."
+BM_TRAILER_DELETED = "🗑 Treyler o'chirildi."
+BM_TRAILER_ASK = "🎞 «{title}» uchun treyler videosini yuboring.\nBekor qilish: /cancel"
+BM_TRAILER_USAGE = "Ishlatilishi:\n/treyler KOD — treyler yuklash\n/treyler KOD o'chir — treylerni o'chirish\n/korish KOD — narxli kartochkani xaridor ko'zi bilan ko'rish"
+BM_HIDDEN_TITLE = "🎬 Nomi: 🔒 <i>sotib olgach ko'rinadi</i>"

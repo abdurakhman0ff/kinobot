@@ -50,8 +50,9 @@ def _info_lines(movie: dict[str, Any], *, short: bool = False) -> list[str]:
     return [f"{label}: {esc(value)}" for label, value in pairs if value]
 
 
-def card_caption(movie: dict[str, Any], extra: str = "") -> str:
-    head = [_title_line(movie), ""] + _info_lines(movie) + [f"⭐ Reyting: {fmt_rating(movie)}"]
+def card_caption(movie: dict[str, Any], extra: str = "", hide_title: bool = False) -> str:
+    title = t.BM_HIDDEN_TITLE if hide_title else _title_line(movie)
+    head = [title, ""] + _info_lines(movie) + [f"⭐ Reyting: {fmt_rating(movie)}"]
     if extra:
         head.append(extra)
     tail = f"\n\n📥 Kod: <code>{movie['code']}</code>"

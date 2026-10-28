@@ -64,7 +64,8 @@ TABLES: dict[str, tuple[list[tuple[str, str]], list[str]]] = {
             ("rating_sum", "INTEGER NOT NULL DEFAULT 0"),
             ("rating_count", "INTEGER NOT NULL DEFAULT 0"),
             ("trailer_url", "TEXT"),  # NULL = hali so'ralmagan, '' = topilmadi
-            ("price", "INTEGER DEFAULT 0"),  # so'm; 0 = bepul
+            ("price", "INTEGER DEFAULT 0"),
+            ("trailer_file_id", "TEXT"),  # so'm; 0 = bepul
             ("created_at", f"TEXT DEFAULT {NOW}"),
             ("updated_at", f"TEXT DEFAULT {NOW}"),
         ],

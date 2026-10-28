@@ -12,7 +12,7 @@ Row = dict[str, Any]
 MOVIE_FIELDS = {
     "code", "type", "title", "original_title", "year", "genres", "countries", "runtime_min",
     "quality", "languages", "description", "tmdb_id", "imdb_id", "poster_path", "poster_file_id",
-    "storage_message_id", "backup_message_id", "file_id", "is_vip", "trailer_url", "price",
+    "storage_message_id", "backup_message_id", "file_id", "is_vip", "trailer_url", "price", "trailer_file_id",
 }
 
 # ro'yxatlarda kerak bo'ladigan qisqa ustunlar

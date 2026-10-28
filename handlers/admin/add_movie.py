@@ -58,6 +58,7 @@ class AddMovie(StatesGroup):
     lang_text = State()
     vip = State()
     price = State()
+    trailer = State()
     desc = State()
     desc_text = State()
     code = State()
@@ -66,14 +67,14 @@ class AddMovie(StatesGroup):
     post_time = State()
 
 
-ORDER = ["quality", "langs", "vip", "price", "desc", "code", "preview"]
+ORDER = ["quality", "langs", "vip", "price", "trailer", "desc", "code", "preview"]
 MANUAL = ["m_year", "m_genres", "m_countries", "m_runtime", "m_poster"]
 MANUAL_PROMPTS = {
     "m_year": t.ADD_M_YEAR, "m_genres": t.ADD_M_GENRES, "m_countries": t.ADD_M_COUNTRIES,
     "m_runtime": t.ADD_M_RUNTIME, "m_poster": t.ADD_M_POSTER,
 }
 EDITABLE = [("title", t.F_TITLE), ("quality", t.F_QUALITY), ("langs", t.F_LANGS), ("vip", t.F_VIP),
-            ("price", t.BM_F_PRICE), ("desc", t.F_DESC), ("code", t.F_CODE)]
+            ("price", t.BM_F_PRICE), ("trailer", t.BM_F_TRAILER), ("desc", t.F_DESC), ("code", t.F_CODE)]
 
 
 def compose(data: dict[str, Any]) -> Row:
@@ -89,6 +90,7 @@ def compose(data: dict[str, Any]) -> Row:
         languages=", ".join(data.get("languages") or []) or None,
         is_vip=int(data.get("is_vip", 0)),
         price=int(data.get("price") or 0),
+        trailer_file_id=data.get("trailer_file_id"),
         description=data.get("description"),
         code=data.get("code") or 0,
         storage_message_id=data.get("storage_message_id"),
@@ -121,6 +123,9 @@ async def ask(step: str, bot: Bot, chat_id: int, state: FSMContext, message: obj
     elif step == "price":
         markup = cancel_kb([btn(t.BM_BTN_FREE, Adm(a="pr", v="0"))])
         text = t.BM_ADD_PRICE
+    elif step == "trailer":
+        markup = cancel_kb([btn(t.BTN_SKIP, Adm(a="trs"))])
+        text = t.BM_ADD_TRAILER
     elif step == "desc":
         row = [btn(t.BTN_DESC_TMDB, Adm(a="ds", v="tmdb"))] if data.get("tmdb_desc") else []
         row += [btn(t.BTN_DESC_OWN, Adm(a="ds", v="own")), btn(t.BTN_DESC_NONE, Adm(a="ds", v="none"))]
@@ -152,6 +157,8 @@ async def proceed(step: str, bot: Bot, chat_id: int, state: FSMContext, message:
         nxt = MANUAL[idx + 1] if idx + 1 < len(MANUAL) else "quality"
     else:
         nxt = ORDER[ORDER.index(step) + 1]
+        if nxt == "trailer" and not data.get("price"):
+            nxt = ORDER[ORDER.index("trailer") + 1]
     await ask(nxt, bot, chat_id, state, message)
 
 
@@ -162,6 +169,8 @@ async def show_preview(bot: Bot, chat_id: int, state: FSMContext) -> None:
     caption = t.ADD_PREVIEW_HEAD.format(type=type_label(movie["type"])) + "\n\n" + card_caption(movie)
     if movie.get("price"):
         caption += f"\n\n💰 Narx: <b>{money(movie['price'])} so'm</b>"
+    if movie.get("trailer_file_id"):
+        caption += "\n🎞 Treyler: yuklangan"
     markup = kb([
         [btn(t.BTN_SAVE_MOVIE, Adm(a="sv")), btn(t.BTN_EDIT, Adm(a="ed"))],
         [btn(t.BTN_CANCEL, Adm(a="x"))],
@@ -413,6 +422,24 @@ async def price_text(message: Message, state: FSMContext, bot: Bot) -> None:
         return
     await state.update_data(price=price)
     await proceed("price", bot, message.chat.id, state)
+
+
+@router.callback_query(AddMovie.trailer, Adm.filter(F.a == "trs"))
+async def trailer_skip(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
+    await proceed("trailer", bot, callback.from_user.id, state, callback.message)
+    await answer(callback)
+
+
+@router.message(AddMovie.trailer, F.video)
+async def trailer_video(message: Message, state: FSMContext, bot: Bot) -> None:
+    await state.update_data(trailer_file_id=message.video.file_id)  # type: ignore[union-attr]
+    await message.answer(t.BM_TRAILER_SAVED)
+    await proceed("trailer", bot, message.chat.id, state)
+
+
+@router.message(AddMovie.trailer)
+async def trailer_bad(message: Message) -> None:
+    await message.answer(t.BM_TRAILER_BAD)
 
 
 @router.callback_query(AddMovie.desc, Adm.filter(F.a == "ds"))
