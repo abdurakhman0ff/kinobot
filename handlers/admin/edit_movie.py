@@ -58,6 +58,7 @@ def movie_admin_text(movie: Row, episodes_count: int | None) -> str:
         t.EDIT_HEAD.format(title=esc(movie["title"]), code=movie["code"], id=movie["id"]),
         f"{t.F_TYPE}: {type_label(movie['type'])} · {'💎 VIP' if movie['is_vip'] else t.FREE}",
         f"{t.BM_F_PRICE}: " + (f"{money(movie.get('price'))} so'm" if movie.get('price') else "—"),
+        f"{t.BM_F_TRAILER}: " + ("✅ bor" if movie.get("trailer_file_id") else "—"),
         f"{t.F_ORIGINAL}: {esc(movie.get('original_title') or '—')}",
         f"{t.F_YEAR}: {movie.get('year') or '—'} · {t.F_RUNTIME}: {fmt_runtime(movie.get('runtime_min')) or '—'}",
         f"{t.F_GENRES}: {esc(movie.get('genres') or '—')}",
@@ -77,6 +78,7 @@ def movie_admin_kb(movie: Row) -> InlineKeyboardMarkup:
     fields = [btn(label, Adm(a="ev", id=m, v=key)) for key, (label, _) in TEXT_FIELDS.items()]
     rows = chunk(fields, 3)
     rows += [
+        [btn(t.BM_F_TRAILER, Adm(a="etr", id=m))],
         [btn(t.F_LANGS, Adm(a="elg", id=m)), btn(t.F_TYPE, Adm(a="ety", id=m)),
          btn(t.BTN_TO_FREE if movie["is_vip"] else t.BTN_TO_VIP, Adm(a="evip", id=m))],
         [btn(t.BTN_POSTER_NEW, Adm(a="epo", id=m)), btn(t.BTN_POSTER_TMDB, Adm(a="ept", id=m))],
@@ -356,4 +358,19 @@ async def edit_delete_yes(callback: CallbackQuery, callback_data: Adm, bot: Bot)
     search.invalidate()
     await render(bot, callback.from_user.id, callback.message, t.DELETED,
                  back_panel_kb([btn(t.BTN_BACK, Adm(a="edit"))]))
+    await answer(callback)
+
+
+
+@router.callback_query(Adm.filter(F.a == "etr"), StateFilter("*"))
+async def edit_trailer(callback: CallbackQuery, callback_data: Adm, state: FSMContext) -> None:
+    from handlers.emoji_ids import TrailerForm
+
+    movie = await movies.get(callback_data.id)
+    if not movie:
+        await answer(callback, t.MOVIE_GONE, alert=True)
+        return
+    await state.set_state(TrailerForm.video)
+    await state.update_data(trailer_movie_id=movie["id"])
+    await callback.message.answer(t.BM_TRAILER_ASK.format(title=esc(movie["title"])))
     await answer(callback)
