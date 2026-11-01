@@ -73,12 +73,7 @@ async def request_text(message: Message, state: FSMContext, bot: Bot, db_user: R
 
 @router.callback_query(Req.filter(F.a == "pf"))
 async def request_prefilled(callback: CallbackQuery, state: FSMContext, bot: Bot, db_user: Row) -> None:
-    text = actions.prefill.pop(db_user["id"], None)
-    if not text:
-        await request_start(callback, state, bot)
-        return
-    await render(bot, callback.from_user.id, callback.message, await _submit(bot, db_user, text), back_kb())
-    await answer(callback)
+    await request_start(callback, state, bot)
 
 
 # ---------- admin tomoni ----------

@@ -58,8 +58,8 @@ def subscribe_kb(items: Sequence[dict[str, Any]]) -> InlineKeyboardMarkup:
 
 
 def not_found_kb(prefill: bool = True) -> InlineKeyboardMarkup:
-    req = btn(t.BTN_REQUEST, Req(a="pf") if prefill else Nav(to="req"))
-    return kb([[req], nav_row()])
+    # so'rov tugmasi yo'q: so'rov faqat menyudagi "Kino so'rash" bo'limidan yuboriladi
+    return kb([nav_row()])
 
 
 def vip_offer_kb() -> InlineKeyboardMarkup:

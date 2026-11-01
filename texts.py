@@ -133,7 +133,7 @@ BTN_VIP_NO_WAIT = "💎 VIP bilan kutmasdan davom eting"
 
 # ---------- qidiruv ----------
 SEARCH_RESULTS = "🔎 «{query}» bo'yicha natijalar: {count} ta"
-SEARCH_NOT_FOUND = "😔 «{query}» bo'yicha hech narsa topilmadi.\n\nKino so'rov qoldirishingiz mumkin."
+SEARCH_NOT_FOUND = "😔 «{query}» bo'yicha hech narsa topilmadi.\n\nKino kodini yuboring yoki boshqa nom bilan qidirib ko'ring."
 SEARCH_EXPIRED = "Qidiruv eskirgan, nomni qaytadan yuboring."
 IMDB_PROMPT = (
     "🟡 <b>IMDb qidiruv</b>\n\n"
@@ -619,7 +619,7 @@ IMPORT_SEND = "📥 CSV faylni yuboring (export formatida). Kod bo'yicha mavjud 
 IMPORT_BAD_FILE = "Faqat .csv fayl (10 MB gacha) yuboring."
 IMPORT_DONE = "✅ Import tugadi.\nYangilandi: {updated}\nTopilmadi: {not_found}\nXato qatorlar: {errors}"
 
-NOT_FOUND = "❌ {code} kodli kino topilmadi.\n\nBoshqa kodni sinab ko'ring yoki 📝 Kino so'rash orqali so'rang."
+NOT_FOUND = "❌ {code} kodli kino topilmadi.\n\nBoshqa kodni sinab ko'ring."
 
 
 # ---------- VIP egalari / VIP berish ----------
