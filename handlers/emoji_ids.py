@@ -110,3 +110,97 @@ async def preview_buy_card(message: Message, command: CommandObject, bot: Bot) -
         return
     from services import delivery
     await delivery.send_buy_card(bot, message.chat.id, movie)
+
+
+# ---------- bazani tiklash (faqat asosiy admin) ----------
+import asyncio  # noqa: E402
+import os  # noqa: E402
+import sqlite3  # noqa: E402
+
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup  # noqa: E402
+
+import config  # noqa: E402
+
+
+class RestoreDb(StatesGroup):
+    file = State()
+
+
+def _is_owner(user_id: int | None) -> bool:
+    return user_id == config.ADMIN_ID
+
+
+@router.message(Command("restoredb"))
+async def restoredb_cmd(message: Message, state: FSMContext) -> None:
+    if not _is_owner(message.from_user.id):  # type: ignore[union-attr]
+        return
+    await state.set_state(RestoreDb.file)
+    await message.answer("🗄 Zaxira .db faylini yuboring (fayl sifatida). Bekor qilish: /cancel")
+
+
+@router.message(RestoreDb.file, Command("cancel"))
+async def restoredb_cancel(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer("Bekor qilindi.")
+
+
+@router.message(RestoreDb.file, F.document)
+async def restoredb_file(message: Message, state: FSMContext, bot: Bot) -> None:
+    if not _is_owner(message.from_user.id):  # type: ignore[union-attr]
+        return
+    pending = config.DB_PATH + ".restore"
+    os.makedirs(os.path.dirname(os.path.abspath(pending)), exist_ok=True)
+    try:
+        await bot.download(message.document, destination=pending)  # type: ignore[arg-type]
+    except Exception as exc:  # noqa: BLE001
+        await message.answer(f"❌ Fayl yuklab olinmadi: {esc(str(exc)[:200])}")
+        return
+    try:
+        con = sqlite3.connect(f"file:{pending}?mode=ro", uri=True)
+        ok = con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        users_n = con.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        movies_n = con.execute("SELECT COUNT(*) FROM movies").fetchone()[0]
+        con.close()
+    except Exception as exc:  # noqa: BLE001
+        os.remove(pending)
+        await message.answer(f"❌ Bu to'g'ri baza fayli emas: {esc(str(exc)[:200])}")
+        return
+    if not ok:
+        os.remove(pending)
+        await message.answer("❌ Baza fayli buzilgan (integrity_check ok emas).")
+        return
+    await state.clear()
+    markup = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="✅ Tiklash", callback_data="rdb_ok"),
+        InlineKeyboardButton(text="❌ Bekor", callback_data="rdb_no"),
+    ]])
+    await message.answer(
+        f"🗄 Fayl tekshirildi: foydalanuvchilar {users_n}, kinolar {movies_n}.\n\n"
+        "⚠️ Tiklash joriy bazani almashtiradi va botni qayta ishga tushiradi. Davom etamizmi?",
+        reply_markup=markup,
+    )
+
+
+@router.callback_query(F.data == "rdb_no")
+async def restoredb_no(callback: CallbackQuery) -> None:
+    if not _is_owner(callback.from_user.id):
+        return
+    try:
+        os.remove(config.DB_PATH + ".restore")
+    except FileNotFoundError:
+        pass
+    await callback.message.edit_text("Bekor qilindi.")  # type: ignore[union-attr]
+    await callback.answer()
+
+
+@router.callback_query(F.data == "rdb_ok")
+async def restoredb_apply(callback: CallbackQuery) -> None:
+    if not _is_owner(callback.from_user.id):
+        return
+    if not os.path.exists(config.DB_PATH + ".restore"):
+        await callback.answer("Fayl topilmadi, qaytadan /restoredb qiling.", show_alert=True)
+        return
+    await callback.message.edit_text("♻️ Baza tiklanmoqda. Bot qayta ishga tushadi (1 daqiqagacha).")  # type: ignore[union-attr]
+    await callback.answer()
+    await asyncio.sleep(1)
+    os._exit(3)  # Railway (ON_FAILURE) botni qayta ishga tushiradi, baza ochilishidan oldin almashadi

@@ -18,6 +18,7 @@ import texts as t
 from database import settings, users
 from database.db import db
 from database.migrations import migrate
+from database.restore import apply_pending_restore
 from handlers import build_router
 from middlewares.ban import BanMiddleware
 from middlewares.throttle import ThrottleMiddleware
@@ -89,6 +90,8 @@ async def main() -> None:
     if not config.BOT_TOKEN:
         raise SystemExit("BOT_TOKEN env o'zgaruvchisi berilmagan")
 
+    if apply_pending_restore(config.DB_PATH):
+        log.info("Zaxira baza tiklandi")
     await db.connect(config.DB_PATH)
     try:
         await migrate()
