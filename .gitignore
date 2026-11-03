@@ -7,3 +7,4 @@ __pycache__/
 *.db-shm
 backups/
 tmdb_report.csv
+/kinobot/
