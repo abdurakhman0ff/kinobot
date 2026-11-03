@@ -8,6 +8,7 @@ from typing import Any
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 
+import config
 import texts as t
 from database import settings, users
 from keyboards.user import watch_url_kb
@@ -66,10 +67,7 @@ def channel_text(movie: Row, link: str) -> str:
 
 
 async def public_post(bot: Bot, movie: Row) -> bool:
-    channel = chat_ref(settings.get("public_channel_id"))
-    if not channel:
-        await notify.owner(bot, t.ADMIN_NO_PUBLIC_CHANNEL)
-        return False
+    channel = config.ADMIN_ID  # post adminga yuboriladi, admin kanalga forward qiladi
     uname = await bot_username(bot)
     caption = channel_text(movie, f"https://t.me/{uname}?start=kino_{movie['code']}")
     markup = None
