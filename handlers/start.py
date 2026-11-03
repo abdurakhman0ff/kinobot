@@ -34,31 +34,24 @@ def menu_view(user: Row, role: str | None) -> tuple[str, InlineKeyboardMarkup]:
 
 
 async def ensure_pin(bot: Bot, user: Row, chat_id: int, first_name: str, is_new: bool) -> None:
-    """Pin xabarni yangilaydi/qayta pin qiladi; yo'qolgan bo'lsa yangisini yuboradi."""
+    """Salomlashuv xabarini yangilaydi (pin QILMAYDI); eski pin bo'lsa olib tashlaydi."""
     greeting = (t.WELCOME_NEW if is_new else t.WELCOME_BACK).format(name=esc(first_name))
     text = f"{greeting}\n\n{t.START_HINT}"
     pinned = user.get("pinned_message_id")
     if pinned:
-        alive = True
-        try:
-            await bot.edit_message_text(text, chat_id=chat_id, message_id=pinned, reply_markup=start_kb())
-        except TelegramBadRequest as exc:
-            alive = "not modified" in str(exc).lower()
-        if alive:
-            try:
-                await bot.pin_chat_message(chat_id, pinned, disable_notification=True)
-                return
-            except TelegramAPIError:
-                pass
         try:
             await bot.unpin_chat_message(chat_id, message_id=pinned)
         except TelegramAPIError:
             pass
+        try:
+            await bot.edit_message_text(text, chat_id=chat_id, message_id=pinned, reply_markup=start_kb())
+            return
+        except TelegramBadRequest as exc:
+            if "not modified" in str(exc).lower():
+                return
+        except TelegramAPIError:
+            pass
     msg = await bot.send_message(chat_id, text, reply_markup=start_kb())
-    try:
-        await bot.pin_chat_message(chat_id, msg.message_id, disable_notification=True)
-    except TelegramAPIError:
-        pass
     await users.set_field(user["id"], "pinned_message_id", msg.message_id)
 
 
