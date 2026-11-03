@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from aiogram import Bot
@@ -22,37 +23,44 @@ log = logging.getLogger(__name__)
 Row = dict[str, Any]
 
 
+def _e(emoji_id: str, fallback: str) -> str:
+    return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
+
+
+def _visible(text: str) -> str:
+    return re.sub(r"<[^>]+>", "", text)
+
+
 def channel_text(movie: Row, link: str) -> str:
     """Kanal posti: ikkita yopiladigan blok + yuklab olish havolasi."""
     title = esc(movie.get("title") or "—")
     original = (movie.get("original_title") or "").strip()
-    info = [f"🎬 Nomi: {title}"]
+    info = [f"{_e('5447242579827523388', '✔️')} Nomi: {title}"]
     if original and original.lower() != (movie.get("title") or "").strip().lower():
-        info.append(f"🌐 Original nomi: {esc(original)}")
+        info.append(f"{_e('5445163158526261598', '☑️')} Original nomi: {esc(original)}")
     pairs = [
-        ("📅 Yil", movie.get("year")),
-        ("🌍 Davlat", movie.get("countries")),
-        ("🎭 Janr", movie.get("genres")),
-        ("🗣 Til", movie.get("languages")),
-        ("📺 Sifat", movie.get("quality")),
-        ("⏱ Davomiylik", fmt_runtime(movie.get("runtime_min")) if movie.get("runtime_min") else None),
+        (_e("5447421246172069841", "📄") + " Yil", movie.get("year")),
+        (_e("5445326466067754897", "🌐") + " Davlat", movie.get("countries")),
+        (_e("5445255929819854310", "🔎") + " Janr", movie.get("genres")),
+        (_e("5447602197439218445", "🌐") + " Til", movie.get("languages")),
+        (_e("5447282724886839705", "📂") + " Sifat", movie.get("quality")),
+        (_e("5445350406215465190", "⏰") + " Davomiylik", fmt_runtime(movie.get("runtime_min")) if movie.get("runtime_min") else None),
     ]
-    info += [f"{label}: {esc(value)}" for label, value in pairs if value]
-    if _movies.rating_of(movie):
-        info.insert(1, f"⭐ Reyting: {fmt_rating(movie)}")
+    missing = "<i>kiritilmagan</i>"
+    info += [f"{label}: {esc(value) if value else missing}" for label, value in pairs]
 
     def build(limit: int) -> str:
         parts = ["<blockquote expandable>" + "\n".join(info) + "</blockquote>"]
         desc = (movie.get("description") or "").strip()
-        if desc:
-            parts.append("<blockquote expandable>📖 Film haqida:\n"
-                         + esc(truncate(desc, limit)) + "</blockquote>")
-        parts.append(f'<a href="{link}">📥 Filmni yuklab olish ✨</a>\n🔑 Kod: <code>{movie["code"]}</code>')
+        body = esc(truncate(desc, limit)) if desc else missing
+        parts.append("<blockquote expandable>" + _e("5247029067256987229", "ℹ️") + " Film haqida:\n" + body + "</blockquote>")
+        parts.append(f'{_e("5445023138297447592", "🔎")} Kod: <code>{movie["code"]}</code>\n'
+                     f'<a href="{link}">{_e("5444961234933806330", "⬇️")} Filmni yuklab olish {_e("5890925363067886150", "✨")}</a>')
         return "\n".join(parts)
 
     for limit in (500, 350, 220, 120):
         text = build(limit)
-        if len(text) <= 1000:
+        if len(_visible(text)) <= 1000:
             return text
     return text
 
@@ -64,11 +72,12 @@ async def public_post(bot: Bot, movie: Row) -> bool:
         return False
     uname = await bot_username(bot)
     caption = channel_text(movie, f"https://t.me/{uname}?start=kino_{movie['code']}")
-    markup = watch_url_kb(uname, movie["code"], t.BTN_WATCH_CHANNEL)
+    markup = None
     photo = poster_of(movie)
     try:
         if photo:
-            msg = await bot.send_photo(channel, photo, caption=caption, reply_markup=markup)
+            msg = await bot.send_photo(channel, photo, caption=caption, reply_markup=markup,
+                                       show_caption_above_media=True)
             await remember_poster(movie, msg)
         else:
             await bot.send_message(channel, caption, reply_markup=markup)
