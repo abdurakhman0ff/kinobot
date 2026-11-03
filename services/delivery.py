@@ -124,24 +124,15 @@ async def send_locked_card(bot: Bot, chat_id: int, movie: Row, message: object =
 
 
 async def send_buy_card(bot: Bot, chat_id: int, movie: Row, message: object = None) -> None:
-    caption = card_caption(movie, t.BM_INFO.format(price=money(movie["price"])), hide_title=True)
     markup = buy_kb(movie)
-    trailer = movie.get("trailer_file_id")
-    if trailer:
-        try:
-            await bot.send_video(chat_id, trailer, caption=caption, reply_markup=markup, protect_content=True)
-            delete = getattr(message, "delete", None)
-            if delete:
-                try:
-                    await delete()
-                except TelegramAPIError:
-                    pass
-            return
-        except TelegramForbiddenError:
-            raise
-        except TelegramAPIError as exc:
-            log.warning("Treyler yuborilmadi (kod %s): %s", movie["code"], exc)
-    await show_card(bot, chat_id, message, movie, caption, markup)
+    try:
+        rows = [r for r in markup.inline_keyboard
+                if any("sotib olish" in (b.text or "").lower() for b in r)]
+        if rows:
+            markup = InlineKeyboardMarkup(inline_keyboard=rows[:1])
+    except Exception:
+        pass
+    await render(bot, chat_id, message, t.BM_LOCKED, markup)
 
 
 async def send_serial_card(bot: Bot, user: Row, chat_id: int, movie: Row, message: object = None) -> None:

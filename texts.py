@@ -767,3 +767,10 @@ BM_TRAILER_DELETED = "🗑 Treyler o'chirildi."
 BM_TRAILER_ASK = "🎞 «{title}» uchun treyler videosini yuboring.\nBekor qilish: /cancel"
 BM_TRAILER_USAGE = "Ishlatilishi:\n/treyler KOD — treyler yuklash\n/treyler KOD o'chir — treylerni o'chirish\n/korish KOD — narxli kartochkani xaridor ko'zi bilan ko'rish"
 BM_HIDDEN_TITLE = "🎬 Nomi: 🔒 <i>sotib olgach ko'rinadi</i>"
+
+
+BM_LOCKED = (
+    '<tg-emoji emoji-id="5260293700088511294">🚫</tg-emoji> <b>Bu kino faqat sotib oluvchilar uchun!</b>\n\n'
+    '<tg-emoji emoji-id="5283139309740765379">💎</tg-emoji> Kinoni sotib olish uchun tugmani bosing '
+    '<tg-emoji emoji-id="5406745015365943482">⬇️</tg-emoji>'
+)
