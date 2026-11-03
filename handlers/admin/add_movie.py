@@ -103,6 +103,13 @@ def compose(data: dict[str, Any]) -> Row:
     return movie
 
 
+class Bulk(StatesGroup):
+    collect = State()
+
+
+QUEUE: dict[int, list[Message]] = {}
+
+
 # ---------- qadamlar ----------
 
 async def ask(step: str, bot: Bot, chat_id: int, state: FSMContext, message: object = None) -> None:
@@ -573,6 +580,7 @@ async def finish(bot: Bot, chat_id: int, state: FSMContext, movie: Row) -> None:
     await bot.send_message(chat_id, t.ADD_DONE.format(code=movie["code"]),
                            reply_markup=back_panel_kb([btn(t.MP_ADD, Adm(a="mp_add", id=movie["id"]))],
                                                       [btn(t.BTN_ADD_MORE, Adm(a="add"))]))
+    await _next_in_queue(bot, chat_id, state)
 
 
 @router.callback_query(Adm.filter(F.a == "pt"), StateFilter("*"))
@@ -611,3 +619,47 @@ async def post_time(message: Message, state: FSMContext, bot: Bot) -> None:
     await misc.add_scheduled(movie["id"], to_db(when), message.from_user.id)  # type: ignore[union-attr]
     await message.answer(t.POST_SCHEDULED.format(time=fmt_local(when)))
     await finish(bot, message.chat.id, state, movie)
+
+
+async def _next_in_queue(bot: Bot, chat_id: int, state: FSMContext) -> None:
+    queue = QUEUE.get(chat_id)
+    if not queue:
+        QUEUE.pop(chat_id, None)
+        return
+    msg = queue.pop(0)
+    await state.clear()
+    await state.set_state(AddMovie.file)
+    await state.update_data(type="film")
+    await bot.send_message(chat_id, f"▶️ Navbatdagi kino. Qoldi: {len(queue)} ta")
+    await got_file(msg, state, bot)
+
+
+@router.message(Command("toplam"))
+async def bulk_start(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    QUEUE[message.chat.id] = []
+    await state.set_state(Bulk.collect)
+    await message.answer("📥 Kino videolarini (saqlash kanalidan) ketma-ket forward qiling.\n"
+                         "Tugagach /boshla yozing. Bekor qilish: /toplam_stop")
+
+
+@router.message(Bulk.collect, F.video | F.document)
+async def bulk_collect(message: Message) -> None:
+    queue = QUEUE.setdefault(message.chat.id, [])
+    queue.append(message)
+    await message.answer(f"✅ {len(queue)}-video qabul qilindi. Yana yuboring yoki /boshla.")
+
+
+@router.message(Command("boshla"))
+async def bulk_go(message: Message, state: FSMContext, bot: Bot) -> None:
+    if not QUEUE.get(message.chat.id):
+        await message.answer("Navbat bo'sh. Avval /toplam yozib, videolarni forward qiling.")
+        return
+    await _next_in_queue(bot, message.chat.id, state)
+
+
+@router.message(Command("toplam_stop"))
+async def bulk_stop(message: Message, state: FSMContext) -> None:
+    QUEUE.pop(message.chat.id, None)
+    await state.clear()
+    await message.answer("Navbat bekor qilindi.")
