@@ -13,11 +13,48 @@ from keyboards.user import watch_url_kb
 from services import broadcast, notify
 from services.cards import poster_of, remember_poster, short_post
 from services.delivery import bot_username
-from utils.text import chat_ref, esc
+from utils.text import chat_ref, esc, truncate
+from database import movies as _movies
+from services.cards import fmt_rating, fmt_runtime
 
 log = logging.getLogger(__name__)
 
 Row = dict[str, Any]
+
+
+def channel_text(movie: Row, link: str) -> str:
+    """Kanal posti: ikkita yopiladigan blok + yuklab olish havolasi."""
+    title = esc(movie.get("title") or "—")
+    original = (movie.get("original_title") or "").strip()
+    info = [f"🎬 Nomi: {title}"]
+    if original and original.lower() != (movie.get("title") or "").strip().lower():
+        info.append(f"🌐 Original nomi: {esc(original)}")
+    pairs = [
+        ("📅 Yil", movie.get("year")),
+        ("🌍 Davlat", movie.get("countries")),
+        ("🎭 Janr", movie.get("genres")),
+        ("🗣 Til", movie.get("languages")),
+        ("📺 Sifat", movie.get("quality")),
+        ("⏱ Davomiylik", fmt_runtime(movie.get("runtime_min")) if movie.get("runtime_min") else None),
+    ]
+    info += [f"{label}: {esc(value)}" for label, value in pairs if value]
+    if _movies.rating_of(movie):
+        info.insert(1, f"⭐ Reyting: {fmt_rating(movie)}")
+
+    def build(limit: int) -> str:
+        parts = ["<blockquote expandable>" + "\n".join(info) + "</blockquote>"]
+        desc = (movie.get("description") or "").strip()
+        if desc:
+            parts.append("<blockquote expandable>📖 Film haqida:\n"
+                         + esc(truncate(desc, limit)) + "</blockquote>")
+        parts.append(f'<a href="{link}">📥 Filmni yuklab olish ✨</a>\n🔑 Kod: <code>{movie["code"]}</code>')
+        return "\n".join(parts)
+
+    for limit in (500, 350, 220, 120):
+        text = build(limit)
+        if len(text) <= 1000:
+            return text
+    return text
 
 
 async def public_post(bot: Bot, movie: Row) -> bool:
@@ -25,8 +62,9 @@ async def public_post(bot: Bot, movie: Row) -> bool:
     if not channel:
         await notify.owner(bot, t.ADMIN_NO_PUBLIC_CHANNEL)
         return False
-    caption = short_post(movie)
-    markup = watch_url_kb(await bot_username(bot), movie["code"], t.BTN_WATCH_CHANNEL)
+    uname = await bot_username(bot)
+    caption = channel_text(movie, f"https://t.me/{uname}?start=kino_{movie['code']}")
+    markup = watch_url_kb(uname, movie["code"], t.BTN_WATCH_CHANNEL)
     photo = poster_of(movie)
     try:
         if photo:
