@@ -32,6 +32,9 @@ def _visible(text: str) -> str:
     return re.sub(r"<[^>]+>", "", text)
 
 
+LOGO_EMOJI_ID = "5435848332238956244"  # kanal logosi (premium emoji ID)
+
+
 def _tags(genres: object) -> str:
     out = []
     for g in str(genres or "").split(","):
@@ -57,7 +60,7 @@ def channel_text(movie: Row, link: str) -> str:
 
     langs = str(movie.get("languages") or "").replace(", ", " | ").replace(",", " | ")
     head = [
-        f"<b>{name}</b>",
+        f'{_e("5375464961822695044", "🎬")} <b>{name}</b>',
         "— — — — — — — — — — —",
         f'{_e("5445326466067754897", "🌐")} <b>Davlat:</b> {val(movie.get("countries"))}',
         f'{_e("5447602197439218445", "🗣")} <b>Til:</b> {val(langs)} | '
@@ -71,7 +74,8 @@ def channel_text(movie: Row, link: str) -> str:
     ]
     foot = [
         "",
-        f'{_e("5447242579827523388", "✔️")} <a href="{channel_url}"><b>ABDURAKHMANJAAN</b></a> bilan bo\'ling!',
+        f'{_e(LOGO_EMOJI_ID, "🎬")} <a href="{channel_url}"><b>ABDURAKHMANJAAN</b></a> bilan bo\'ling! '
+        f'{_e("5447242579827523388", "✔️")}',
     ]
     desc = (movie.get("description") or "").strip()
 
