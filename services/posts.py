@@ -69,7 +69,7 @@ def channel_text(movie: Row, link: str) -> str:
         f'{_e("5445255929819854310", "🔎")} <b>Janr:</b> {_tags(movie.get("genres")) or missing}',
         f'{_e("5445023138297447592", "🔎")} <b>Film kodi:</b> <code>{movie["code"]}</code>',
         "",
-        f'<a href="{link}">{_e("5444961234933806330", "⬇️")} <b>TOMOSHA QILISH</b> {_e("5890925363067886150", "✨")}</a>',
+        f'{_e("5444961234933806330", "⬇️")} <a href="{link}"><b>TOMOSHA QILISH</b></a> {_e("5890925363067886150", "✨")}',
         "",
     ]
     foot = [
