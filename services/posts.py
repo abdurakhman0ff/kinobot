@@ -32,37 +32,58 @@ def _visible(text: str) -> str:
     return re.sub(r"<[^>]+>", "", text)
 
 
+def _tags(genres: object) -> str:
+    out = []
+    for g in str(genres or "").split(","):
+        g = re.sub(r"[^\w]+", "", g.strip().replace(" ", "_").replace("'", "").replace("’", "").replace("ʻ", ""))
+        if g:
+            out.append("#" + g)
+    return " ".join(out)
+
+
 def channel_text(movie: Row, link: str) -> str:
-    """Kanal posti: ikkita yopiladigan blok + yuklab olish havolasi."""
+    """Kanal posti: nom, ma'lumot, tomosha havolasi, tavsif bloki, obuna havolasi."""
+    missing = "<i>kiritilmagan</i>"
+    channel_url = getattr(config, "PUBLIC_CHANNEL_URL", None) or "https://t.me/abdurakhmanjaan"
+
     title = esc(movie.get("title") or "—")
     original = (movie.get("original_title") or "").strip()
-    info = [f"{_e('5447242579827523388', '✔️')} Nomi: {title}"]
+    name = title
     if original and original.lower() != (movie.get("title") or "").strip().lower():
-        info.append(f"{_e('5445163158526261598', '☑️')} Original nomi: {esc(original)}")
-    pairs = [
-        (_e("5447421246172069841", "📄") + " Yil", movie.get("year")),
-        (_e("5445326466067754897", "🌐") + " Davlat", movie.get("countries")),
-        (_e("5445255929819854310", "🔎") + " Janr", movie.get("genres")),
-        (_e("5447602197439218445", "🌐") + " Til", movie.get("languages")),
-        (_e("5447282724886839705", "📂") + " Sifat", movie.get("quality")),
-        (_e("5445350406215465190", "⏰") + " Davomiylik", fmt_runtime(movie.get("runtime_min")) if movie.get("runtime_min") else None),
+        name += f" ({esc(original)})"
+
+    def val(v: object) -> str:
+        return esc(v) if v else missing
+
+    langs = str(movie.get("languages") or "").replace(", ", " | ").replace(",", " | ")
+    head = [
+        f"<b>{name}</b>",
+        "— — — — — — — — — — —",
+        f'{_e("5445326466067754897", "🌐")} <b>Davlat:</b> {val(movie.get("countries"))}',
+        f'{_e("5447602197439218445", "🗣")} <b>Til:</b> {val(langs)} | '
+        f'{_e("5447421246172069841", "📄")} <b>Yil:</b> {val(movie.get("year"))}',
+        f'{_e("5447282724886839705", "📂")} <b>Sifat:</b> {val(movie.get("quality"))}',
+        f'{_e("5445255929819854310", "🔎")} <b>Janr:</b> {_tags(movie.get("genres")) or missing}',
+        f'{_e("5445023138297447592", "🔎")} <b>Film kodi:</b> <code>{movie["code"]}</code>',
+        "",
+        f'<a href="{link}">{_e("5444961234933806330", "⬇️")} <b>TOMOSHA QILISH</b> {_e("5890925363067886150", "✨")}</a>',
+        "",
     ]
-    missing = "<i>kiritilmagan</i>"
-    info += [f"{label}: {esc(value) if value else missing}" for label, value in pairs]
+    foot = [
+        "",
+        f'{_e("5447242579827523388", "✔️")} <a href="{channel_url}"><b>ABDURAKHMANJAAN</b></a> bilan bo\'ling!',
+    ]
+    desc = (movie.get("description") or "").strip()
 
     def build(limit: int) -> str:
-        parts = ["<blockquote expandable>" + "\n".join(info) + "</blockquote>"]
-        desc = (movie.get("description") or "").strip()
         body = esc(truncate(desc, limit)) if desc else missing
-        parts.append("<blockquote expandable>" + _e("5247029067256987229", "ℹ️") + " Film haqida:\n" + body + "</blockquote>")
-        parts.append(f'{_e("5445023138297447592", "🔎")} Kod: <code>{movie["code"]}</code>\n'
-                     f'<a href="{link}">{_e("5444961234933806330", "⬇️")} Filmni yuklab olish {_e("5890925363067886150", "✨")}</a>')
-        return "\n".join(parts)
+        return "\n".join(head + [f"<blockquote expandable>{body}</blockquote>"] + foot)
 
+    text = build(500)
     for limit in (500, 350, 220, 120):
         text = build(limit)
         if len(_visible(text)) <= 1000:
-            return text
+            break
     return text
 
 
@@ -74,8 +95,7 @@ async def public_post(bot: Bot, movie: Row) -> bool:
     photo = poster_of(movie)
     try:
         if photo:
-            msg = await bot.send_photo(channel, photo, caption=caption, reply_markup=markup,
-                                       show_caption_above_media=True)
+            msg = await bot.send_photo(channel, photo, caption=caption, reply_markup=markup)
             await remember_poster(movie, msg)
         else:
             await bot.send_message(channel, caption, reply_markup=markup)
