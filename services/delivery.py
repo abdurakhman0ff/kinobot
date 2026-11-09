@@ -132,33 +132,15 @@ async def send_buy_card(bot: Bot, chat_id: int, movie: Row, message: object = No
             markup = InlineKeyboardMarkup(inline_keyboard=rows[:1])
     except Exception:
         pass
-    text = t.BM_LOCKED
-    try:
-        import random
-        from database import movies as _mv
-        from keyboards.callbacks import Op
-        from keyboards.common import btn as _btn
-
-        def _free(rows):
-            return [m for m in rows
-                    if m["id"] != movie["id"] and not int(m.get("price") or 0) and not m.get("is_vip")]
-
-        picks = _free(await _mv.similar(movie, 12))
-        if len(picks) < 3:
-            have = {m["id"] for m in picks}
-            extra = [m for m in _free(await _mv.newest(20)) if m["id"] not in have]
-            random.shuffle(extra)
-            picks += extra[:3 - len(picks)]
-        random.shuffle(picks)
-        picks = picks[:3]
-        if picks:
-            text = t.BM_LOCKED + "\n\n🎁 Shunga o'xshash bepul kinolar:"
-            for m in picks:
-                label = m["title"] + (f" ({m['year']})" if m.get("year") else "")
-                markup.inline_keyboard.append([_btn(label[:60], Op(id=m["id"]))])
-    except Exception:
-        log.warning("O'xshash kinolar qo'shilmadi", exc_info=True)
-    await render(bot, chat_id, message, text, markup)
+    from keyboards.callbacks import Buy, Nav, Rnd
+    from keyboards.common import btn as _btn, kb as _kb
+    from utils.text import money as _money
+    markup = _kb([
+        [_btn(t.BM_BTN_BUY_SHORT.format(price=_money(movie["price"])), Buy(a="go", id=movie["id"])),
+         _btn(t.BM_BTN_FREE, Rnd(a="free5", id=movie["id"]))],
+        [_btn(t.BM_BTN_VIP, Nav(to="vip"))],
+    ])
+    await render(bot, chat_id, message, t.BM_LOCKED, markup)
 
 
 async def send_serial_card(bot: Bot, user: Row, chat_id: int, movie: Row, message: object = None) -> None:

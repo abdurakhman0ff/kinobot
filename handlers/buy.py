@@ -14,7 +14,7 @@ from aiogram.types import CallbackQuery, Message
 import texts as t
 from database import movies, purchases, settings, users
 from database.db import db
-from keyboards.callbacks import Buy
+from keyboards.callbacks import Buy, Nav, Rnd
 from keyboards.common import btn, kb
 from keyboards.user import back_kb
 from services import delivery
@@ -141,3 +141,31 @@ async def buy_decide(callback: CallbackQuery, callback_data: Buy, bot: Bot) -> N
                 await delivery.open_movie(bot, row, uid, movie, checked=True)
     except TelegramAPIError:
         pass
+
+
+@router.callback_query(Rnd.filter(F.a == "free5"))
+async def free_top5(callback: CallbackQuery, callback_data: Rnd, bot: Bot) -> None:
+    from keyboards.callbacks import Op
+    from utils.ui import render as _render
+
+    try:
+        _, top_rows = await movies.top("a", 0, 40)
+        ids = [r["id"] for r in top_rows]
+    except Exception:
+        ids = []
+    full = {m["id"]: m for m in await movies.by_ids(ids)} if ids else {}
+    ordered = [full[i] for i in ids if i in full]
+    if len(ordered) < 5:
+        have = {m["id"] for m in ordered}
+        ordered += [m for m in await movies.newest(40) if m["id"] not in have]
+    free = [m for m in ordered if not int(m.get("price") or 0) and not m.get("is_vip")][:5]
+
+    rows = []
+    for m in free:
+        label = m["title"] + (f" ({m['year']})" if m.get("year") else "")
+        rows.append([btn(label[:60], Op(id=m["id"]))])
+    back = Op(id=callback_data.id) if callback_data.id else Nav(to="menu")
+    rows.append([btn(t.BM_BTN_BACK, back)])
+    await _render(bot, callback.from_user.id, callback.message,
+                  t.BM_FREE_TITLE if free else t.BM_FREE_EMPTY, kb(rows))
+    await answer(callback)

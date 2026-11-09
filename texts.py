@@ -774,3 +774,9 @@ BM_LOCKED = (
     '<tg-emoji emoji-id="5283139309740765379">💎</tg-emoji> Kinoni sotib olish uchun tugmani bosing '
     '<tg-emoji emoji-id="5406745015365943482">⬇️</tg-emoji>'
 )
+
+BM_BTN_BUY_SHORT = "🛒 Sotib olish — {price}"
+BM_BTN_FREE = "🎁 Bepul kinolar"
+BM_FREE_TITLE = "🎁 <b>Eng ko'p ko'rilgan bepul kinolar</b>\n\nBirini tanlang:"
+BM_FREE_EMPTY = "Hozircha bepul kinolar topilmadi."
+BM_BTN_BACK = "⬅️ Orqaga"
