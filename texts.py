@@ -780,3 +780,5 @@ BM_BTN_FREE = "🎁 Bepul kinolar"
 BM_FREE_TITLE = "🎁 <b>Eng ko'p ko'rilgan bepul kinolar</b>\n\nBirini tanlang:"
 BM_FREE_EMPTY = "Hozircha bepul kinolar topilmadi."
 BM_BTN_BACK = "⬅️ Orqaga"
+
+BTN_VIP_SECTION = "👑 VIP bo'lim"
