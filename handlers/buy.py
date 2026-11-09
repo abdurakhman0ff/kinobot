@@ -52,14 +52,17 @@ async def buy_start(callback: CallbackQuery, callback_data: Buy, state: FSMConte
     await state.update_data(movie_id=movie["id"])
     text = t.BM_CARD.format(title=esc(movie["title"]), card=esc(card),
                             owner=esc(settings.get("card_owner") or "—"), price=money(price))
-    await bot.send_message(callback.from_user.id, text, reply_markup=kb([[btn(t.BTN_CANCEL, Buy(a="x"))]]))
+    await bot.send_message(callback.from_user.id, text, reply_markup=kb([[btn(t.BM_BTN_BACK, Buy(a="x"))]]))
     await answer(callback)
 
 
 @router.callback_query(Buy.filter(F.a == "x"), StateFilter("*"))
 async def buy_cancel(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     await state.clear()
-    await bot.send_message(callback.from_user.id, t.BM_CANCELLED, reply_markup=back_kb())
+    try:
+        await callback.message.delete()  # type: ignore[union-attr]
+    except Exception:
+        await bot.send_message(callback.from_user.id, t.BM_CANCELLED, reply_markup=back_kb())
     await answer(callback)
 
 
@@ -153,7 +156,9 @@ async def free_top5(callback: CallbackQuery, callback_data: Rnd, bot: Bot) -> No
         ids = [r["id"] for r in top_rows]
     except Exception:
         ids = []
-    full = {m["id"]: m for m in await movies.by_ids(ids)} if ids else {}
+    marks = ",".join("?" * len(ids))
+    rows_db = await db.fetchall(f"SELECT * FROM movies WHERE id IN ({marks})", tuple(ids)) if ids else []
+    full = {m["id"]: m for m in rows_db}
     ordered = [full[i] for i in ids if i in full]
     if len(ordered) < 5:
         have = {m["id"] for m in ordered}
