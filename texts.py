@@ -770,7 +770,7 @@ BM_HIDDEN_TITLE = "🎬 Nomi: 🔒 <i>sotib olgach ko'rinadi</i>"
 
 
 BM_LOCKED = (
-    '<tg-emoji emoji-id="5260293700088511294">🚫</tg-emoji> <b>Bu kino faqat sotib oluvchilar uchun!</b>\n\n'
+    '<tg-emoji emoji-id="5296369303661067030">🔒</tg-emoji> <b>Bu pullik kino!</b>\n\n'
     '<tg-emoji emoji-id="5283139309740765379">💎</tg-emoji> Kinoni sotib olish uchun tugmani bosing '
     '<tg-emoji emoji-id="5406745015365943482">⬇️</tg-emoji>'
 )
