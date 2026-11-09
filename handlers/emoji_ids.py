@@ -204,3 +204,85 @@ async def restoredb_apply(callback: CallbackQuery) -> None:
     await callback.answer()
     await asyncio.sleep(1)
     os._exit(3)  # Railway (ON_FAILURE) botni qayta ishga tushiradi, baza ochilishidan oldin almashadi
+
+
+# ---------- VIP bo'lim ----------
+from aiogram import Bot as _Bot, F as _F  # noqa: E402
+from aiogram.types import CallbackQuery as _CQ  # noqa: E402
+from database import users as _users  # noqa: E402
+from database.db import db as _db  # noqa: E402
+from database.movies import SHORT as _SHORT  # noqa: E402
+from keyboards.callbacks import Nav as _Nav, Pg as _Pg  # noqa: E402
+from keyboards.common import btn as _btn, kb as _kb, list_kb as _list_kb, pages_of as _pages_of  # noqa: E402
+from utils.text import esc as _esc  # noqa: E402
+from utils.ui import answer as _answer, render as _render  # noqa: E402
+
+_VZ_PER_PAGE = 8
+
+
+def _vz_op(series: bool) -> str:
+    return "=" if series else "!="
+
+
+async def _vz_count(series: bool) -> int:
+    return int(await _db.fetchval(
+        f"SELECT COUNT(*) FROM movies WHERE is_vip = 1 AND type {_vz_op(series)} 'serial'", default=0))
+
+
+async def _vz_rows(series: bool, offset: int, limit: int) -> list:
+    return await _db.fetchall(
+        f"SELECT {_SHORT} FROM movies m WHERE m.is_vip = 1 AND m.type {_vz_op(series)} 'serial' "
+        "ORDER BY m.id DESC LIMIT ? OFFSET ?", (limit, offset))
+
+
+@router.callback_query(_Nav.filter(_F.to == "vipzone"))
+async def vipzone_menu(callback: _CQ, bot: _Bot, db_user: dict) -> None:
+    films = await _vz_count(False)
+    series = await _vz_count(True)
+    if not _users.is_privileged(db_user):
+        sample = await _db.fetchall("SELECT title, year FROM movies WHERE is_vip = 1 ORDER BY RANDOM() LIMIT 3")
+        lines = ["👑 <b>VIP bo'lim</b>", "", "🔒 Bu bo'lim faqat VIP obunachilar uchun.", ""]
+        if films + series:
+            lines.append(f"Bu yerda {films} ta VIP kino va {series} ta serial bor.")
+        if sample:
+            lines.append("Masalan:")
+            for m in sample:
+                year = f" ({m['year']})" if m.get("year") else ""
+                lines.append(f"• {_esc(m['title'])}{year}")
+        lines += ["", "VIP bilan hammasini cheklovsiz ko'rasiz."]
+        markup = _kb([[_btn("💎 VIP olish", _Nav(to="vip"))], [_btn("⬅️ Menyu", _Nav(to="menu"))]])
+        await _render(bot, callback.from_user.id, callback.message, "\n".join(lines), markup)
+        await _answer(callback)
+        return
+    markup = _kb([
+        [_btn(f"🎬 VIP kinolar ({films})", _Pg(k="vzf", p=0)),
+         _btn(f"📺 VIP seriallar ({series})", _Pg(k="vzs", p=0))],
+        [_btn("🆕 Yangi VIP kinolar", _Pg(k="vzn", p=0))],
+        [_btn("⬅️ Menyu", _Nav(to="menu"))],
+    ])
+    await _render(bot, callback.from_user.id, callback.message,
+                  "👑 <b>VIP bo'lim</b>\n\nFaqat VIP obunachilar uchun maxsus kinolar va seriallar.", markup)
+    await _answer(callback)
+
+
+@router.callback_query(_Pg.filter(_F.k.in_({"vzf", "vzs", "vzn"})))
+async def vipzone_list(callback: _CQ, callback_data: _Pg, bot: _Bot, db_user: dict) -> None:
+    if not _users.is_privileged(db_user):
+        await _answer(callback, "Bu bo'lim faqat VIP obunachilar uchun.", alert=True)
+        return
+    kind = callback_data.k
+    if kind == "vzn":
+        rows = await _db.fetchall(f"SELECT {_SHORT} FROM movies m WHERE m.is_vip = 1 ORDER BY m.id DESC LIMIT 10")
+        text = "👑 <b>Yangi VIP kinolar</b>" + ("" if rows else "\n\nHozircha bo'sh.")
+        markup = _list_kb(rows, "vzn", 0, 1)
+    else:
+        series = kind == "vzs"
+        total = await _vz_count(series)
+        pages = _pages_of(total, _VZ_PER_PAGE)
+        page = min(max(callback_data.p, 0), pages - 1)
+        rows = await _vz_rows(series, page * _VZ_PER_PAGE, _VZ_PER_PAGE)
+        title = "📺 VIP seriallar" if series else "🎬 VIP kinolar"
+        text = f"👑 <b>{title}</b> ({total})" + ("" if rows else "\n\nHozircha bo'sh.")
+        markup = _list_kb(rows, kind, page, pages)
+    await _render(bot, callback.from_user.id, callback.message, text, markup)
+    await _answer(callback)
