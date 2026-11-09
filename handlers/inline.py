@@ -52,14 +52,6 @@ def _result(movie: Row, bot_username: str) -> InlineQueryResultArticle:
 
 @router.inline_query()
 async def inline_search(query: InlineQuery, bot: Bot, db_user: Row | None = None) -> None:
-    user = db_user or {"id": query.from_user.id}
-    if not users.is_privileged(user) and await subscription.missing(bot, query.from_user.id):
-        await query.answer(
-            [], cache_time=5, is_personal=True,
-            button=InlineQueryResultsButton(text=t.INLINE_SUBSCRIBE, start_parameter="sub"),
-        )
-        return
-
     offset = int(query.offset) if query.offset.isdigit() else 0
     text = query.query.strip()
     if not text:

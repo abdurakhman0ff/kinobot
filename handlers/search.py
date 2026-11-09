@@ -58,5 +58,4 @@ async def text_query(message: Message, bot: Bot, db_user: Row) -> None:
         await delivery.open_by_code(bot, db_user, message.chat.id, int(text))
         return
     text = text[:100]
-    if await subscription.ensure(bot, db_user, message.chat.id, {"a": "search", "q": text}):
-        await actions.show_search(bot, db_user, message.chat.id, text)
+    await actions.show_search(bot, db_user, message.chat.id, text)
